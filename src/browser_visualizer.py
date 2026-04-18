@@ -28,13 +28,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import rasterio
 from rasterio.enums import Resampling
-from rasterio.warp import reproject
+from rasterio.features import rasterize
+from rasterio.warp import reproject, transform_geom
 
 from .inventory import AEF_DIR, LABELS_DIR, S1_DIR, S2_DIR, Tile, list_tiles
 from .labels import fused_labels, load_reference_grid
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = REPO_ROOT / "viewer"
+SUBMISSION_DIR = REPO_ROOT / "submission"
 
 S2_RE = re.compile(
     r"^(?P<tile>.+)__s2_l2a_(?P<year>\d{4})_(?P<month>\d{1,2})\.tif$"
@@ -44,6 +46,7 @@ S1_RE = re.compile(
     r"(?P<orbit>ascending|descending)\.tif$"
 )
 GLADL_RE = re.compile(r"^gladl_(?P<tile>.+)_alert(?P<year>\d{2})\.tif$")
+PREDICTION_VERSION_RE = re.compile(r"_v(?P<version>\d+)")
 
 AEF_RGB_BANDS = (6, 42, 49)
 DEFAULT_PREVIEW_SIZE = 768
@@ -66,6 +69,8 @@ FUSED_SOFT_CMAP = mcolors.ListedColormap(["#d3d3d3", "#ffffb2", "#fd8d3c", "#d73
 FUSED_SOFT_NORM = mcolors.BoundaryNorm(
     [-0.1, 1 / 6, 0.5, 5 / 6, 1.1], FUSED_SOFT_CMAP.N
 )
+
+PREDICTION_OVERLAY_RGBA = np.array(mcolors.to_rgba("#2563eb"), dtype=np.float32)
 
 
 def _month_key(year: int, month: int) -> int:
@@ -248,6 +253,67 @@ def _build_timeline_entries(
     ]
 
 
+def _prediction_source_sort_key(path: Path) -> tuple[bool, int, str]:
+    match = PREDICTION_VERSION_RE.search(path.name)
+    version = int(match["version"]) if match else 0
+    return (path.name.startswith("smoke"), -version, path.name)
+
+
+@lru_cache(maxsize=1)
+def _known_tiles_by_split() -> dict[str, frozenset[str]]:
+    return {
+        split: frozenset(tile.tile_id for tile in list_tiles(split))
+        for split in ("train", "test")
+    }
+
+
+@lru_cache(maxsize=1)
+def prediction_sources() -> dict[str, dict[str, object]]:
+    known_tiles = _known_tiles_by_split()
+    catalog: dict[str, dict[str, object]] = {}
+
+    if not SUBMISSION_DIR.exists():
+        return catalog
+
+    for source_dir in sorted(
+        SUBMISSION_DIR.iterdir(),
+        key=_prediction_source_sort_key,
+    ):
+        if not source_dir.is_dir():
+            continue
+
+        available_tiles = {
+            split: {
+                path.stem
+                for path in source_dir.glob("*.geojson")
+                if path.stem in known_tiles[split]
+            }
+            for split in ("train", "test")
+        }
+        if not any(available_tiles.values()):
+            continue
+
+        catalog[source_dir.name] = {
+            "id": source_dir.name,
+            "label": source_dir.name,
+            "path": source_dir,
+            "available_tiles": {
+                split: frozenset(sorted(tile_ids))
+                for split, tile_ids in available_tiles.items()
+            },
+        }
+
+    return catalog
+
+
+def _discover_prediction_entries(split: str, tile_id: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for source in prediction_sources().values():
+        if tile_id in source["available_tiles"][split]:
+            entries.append({"id": source["id"], "label": source["label"]})
+    return entries
+
+
 @lru_cache(maxsize=16)
 def viewer_tiles(split: str) -> dict[str, object]:
     tiles = list_tiles(split)
@@ -270,6 +336,7 @@ def tile_manifest(split: str, tile_id: str) -> dict[str, object]:
     s1_entries = _discover_s1_entries(tile)
     aef_entries = [{"id": str(year), "label": str(year), "year": year} for year in tile.years]
     label_entries = _discover_label_entries(tile)
+    prediction_entries = _discover_prediction_entries(split, tile_id)
     timeline_entries = _build_timeline_entries(s2_entries, s1_entries)
 
     defaults = {
@@ -284,6 +351,7 @@ def tile_manifest(split: str, tile_id: str) -> dict[str, object]:
             (entry["id"] for entry in label_entries if entry["id"] == "fused-soft"),
             label_entries[0]["id"] if label_entries else None,
         ),
+        "prediction": None,
         "timeline": timeline_entries[0]["id"] if timeline_entries else None,
     }
 
@@ -296,6 +364,7 @@ def tile_manifest(split: str, tile_id: str) -> dict[str, object]:
         "s1": s1_entries,
         "aef": aef_entries,
         "labels": label_entries,
+        "predictions": prediction_entries,
         "timeline": timeline_entries,
         "defaults": defaults,
     }
@@ -323,6 +392,17 @@ def _s1_path(split: str, tile_id: str, item: str) -> Path:
 
 def _aef_path(split: str, tile_id: str, item: str) -> Path:
     return AEF_DIR / split / f"{tile_id}_{int(item)}.tiff"
+
+
+def _prediction_path(source_id: str, tile_id: str) -> Path:
+    source = prediction_sources().get(source_id)
+    if source is None:
+        raise FileNotFoundError(f"unknown prediction source '{source_id}'")
+
+    path = Path(source["path"]) / f"{tile_id}.geojson"
+    if not path.exists():
+        raise FileNotFoundError(path)
+    return path
 
 
 def _render_s2_preview(split: str, tile_id: str, item: str, max_size: int) -> bytes:
@@ -518,6 +598,61 @@ def _resolve_base_grid(
         return (out_h, out_w), dst_transform, src.crs
 
 
+@lru_cache(maxsize=128)
+def _prediction_geometries(source_id: str, tile_id: str) -> tuple[dict[str, object], ...]:
+    path = _prediction_path(source_id, tile_id)
+    payload = json.loads(path.read_text())
+    if payload.get("type") != "FeatureCollection":
+        raise ValueError(f"{path} is not a GeoJSON FeatureCollection")
+
+    geometries: list[dict[str, object]] = []
+    for feature in payload.get("features", []):
+        geometry = feature.get("geometry")
+        if not isinstance(geometry, dict):
+            continue
+        geometries.append(geometry)
+
+    if not geometries:
+        raise FileNotFoundError(f"no prediction polygons found in {path}")
+
+    return tuple(geometries)
+
+
+def _render_prediction_overlay(
+    base_kind: str,
+    split: str,
+    tile_id: str,
+    base_item: str,
+    source_id: str,
+    max_size: int,
+) -> bytes:
+    (out_h, out_w), dst_transform, dst_crs = _resolve_base_grid(
+        base_kind, split, tile_id, base_item, max_size
+    )
+    geometries = _prediction_geometries(source_id, tile_id)
+
+    shapes = [
+        (
+            transform_geom("EPSG:4326", dst_crs, geometry, antimeridian_cutting=True),
+            1,
+        )
+        for geometry in geometries
+    ]
+    mask = rasterize(
+        shapes,
+        out_shape=(out_h, out_w),
+        transform=dst_transform,
+        fill=0,
+        default_value=1,
+        dtype=np.uint8,
+    )
+
+    rgba = np.zeros((out_h, out_w, 4), dtype=np.float32)
+    rgba[..., :3] = PREDICTION_OVERLAY_RGBA[:3]
+    rgba[..., 3] = np.where(mask > 0, 1.0, 0.0)
+    return _encode_rgba_png(rgba)
+
+
 def _render_overlay_preview(
     base_kind: str,
     split: str,
@@ -572,6 +707,20 @@ def render_overlay(
     max_size: int,
 ) -> bytes:
     return _render_overlay_preview(base_kind, split, tile_id, base_item, label_item, max_size)
+
+
+@lru_cache(maxsize=128)
+def render_prediction_overlay(
+    base_kind: str,
+    split: str,
+    tile_id: str,
+    base_item: str,
+    source_id: str,
+    max_size: int,
+) -> bytes:
+    return _render_prediction_overlay(
+        base_kind, split, tile_id, base_item, source_id, max_size
+    )
 
 
 class ViewerHandler(BaseHTTPRequestHandler):
@@ -629,6 +778,19 @@ class ViewerHandler(BaseHTTPRequestHandler):
                 label_item = self._required_param(params, "label_item")
                 size = int(params.get("size", [str(DEFAULT_PREVIEW_SIZE)])[0])
                 png = render_overlay(base_kind, split, tile_id, base_item, label_item, size)
+                self._send_bytes(png, "image/png")
+                return
+            if parsed.path == "/api/prediction_overlay":
+                params = parse_qs(parsed.query)
+                base_kind = self._required_param(params, "base_kind")
+                split = params.get("split", ["train"])[0]
+                tile_id = self._required_param(params, "tile_id")
+                base_item = self._required_param(params, "base_item")
+                source_id = self._required_param(params, "source_id")
+                size = int(params.get("size", [str(DEFAULT_PREVIEW_SIZE)])[0])
+                png = render_prediction_overlay(
+                    base_kind, split, tile_id, base_item, source_id, size
+                )
                 self._send_bytes(png, "image/png")
                 return
         except FileNotFoundError as exc:

@@ -99,3 +99,4 @@ The first version supports:
 - Weak-label previews for GLAD-S2, GLAD-L, RADD, and fused train labels
 - A per-tile month scrubber that steps through the available Sentinel-1 and Sentinel-2 timeline
 - Reprojected label overlays on top of the active Sentinel-2 and Sentinel-1 views
+- Optional prediction overlays from per-tile submission GeoJSON folders under `submission/`, with independent opacity from the weak-label overlay

@@ -5,12 +5,22 @@ const state = {
   timelineIndex: 0,
 };
 
+const PREDICTION_HELPERS = {
+  trainUnavailable:
+    "No prediction file for this train tile. Current submission folders only contain test-tile outputs.",
+  testUnavailable:
+    "No prediction file found for this tile in the available submission folders.",
+  available:
+    "Select a prediction run to overlay its polygons.",
+};
+
 const previewConfigs = [
   {
     kind: "s2",
     selectId: "s2-select",
     imageId: "s2-image",
-    overlayImageId: "s2-overlay",
+    labelOverlayImageId: "s2-label-overlay",
+    predictionOverlayImageId: "s2-prediction-overlay",
     statusId: "s2-status",
     emptyText: "No Sentinel-2 observation found for this tile.",
   },
@@ -18,7 +28,8 @@ const previewConfigs = [
     kind: "s1",
     selectId: "s1-select",
     imageId: "s1-image",
-    overlayImageId: "s1-overlay",
+    labelOverlayImageId: "s1-label-overlay",
+    predictionOverlayImageId: "s1-prediction-overlay",
     statusId: "s1-status",
     emptyText: "No Sentinel-1 observation found for this tile.",
   },
@@ -87,7 +98,7 @@ function previewUrl(kind, tileId, item) {
   return `/api/preview?${params.toString()}`;
 }
 
-function overlayUrl(baseKind, tileId, baseItem, labelItem) {
+function labelOverlayUrl(baseKind, tileId, baseItem, labelItem) {
   const params = new URLSearchParams({
     base_kind: baseKind,
     split: state.split,
@@ -97,6 +108,18 @@ function overlayUrl(baseKind, tileId, baseItem, labelItem) {
     size: "768",
   });
   return `/api/overlay?${params.toString()}`;
+}
+
+function predictionOverlayUrl(baseKind, tileId, baseItem, sourceId) {
+  const params = new URLSearchParams({
+    base_kind: baseKind,
+    split: state.split,
+    tile_id: tileId,
+    base_item: baseItem,
+    source_id: sourceId,
+    size: "768",
+  });
+  return `/api/prediction_overlay?${params.toString()}`;
 }
 
 function parseObservationId(kind, value) {
@@ -214,51 +237,122 @@ function setImageState(image, src = null) {
   image.src = src;
 }
 
-function clearOverlay(config) {
-  if (!config.overlayImageId) {
+function clearOverlayImage(imageId) {
+  if (!imageId) {
     return;
   }
-  const overlayImage = document.getElementById(config.overlayImageId);
+  const overlayImage = document.getElementById(imageId);
   overlayImage.style.opacity = "";
   setImageState(overlayImage, null);
+}
+
+function clearAllOverlays(config) {
+  clearOverlayImage(config.labelOverlayImageId);
+  clearOverlayImage(config.predictionOverlayImageId);
 }
 
 function setPreviewMessage(config, message) {
   const image = document.getElementById(config.imageId);
   const status = document.getElementById(config.statusId);
   setImageState(image, null);
-  clearOverlay(config);
+  clearAllOverlays(config);
   status.textContent = message;
 }
 
-function updateOverlayOpacityLabel() {
-  const opacityInput = document.getElementById("overlay-opacity");
-  const output = document.getElementById("overlay-opacity-value");
+function updateOpacityLabel(inputId, outputId) {
+  const opacityInput = document.getElementById(inputId);
+  const output = document.getElementById(outputId);
   output.textContent = `${opacityInput.value}%`;
 }
 
-function currentOverlaySelection() {
-  return document.getElementById("overlay-select").value || "";
+function setPredictionHelper(message = "") {
+  document.getElementById("prediction-helper").textContent = message;
 }
 
-function applyOverlayForPanel(config, tileId, baseItem) {
-  if (!config.overlayImageId) {
+function currentLabelOverlaySelection() {
+  return document.getElementById("label-overlay-select").value || "";
+}
+
+function currentPredictionSelection() {
+  return document.getElementById("prediction-select").value || "";
+}
+
+function predictionAvailabilityState() {
+  const predictions = state.manifest?.predictions ?? [];
+  if (predictions.length === 0) {
+    return "unavailable";
+  }
+  return currentPredictionSelection() ? "selected" : "available";
+}
+
+function syncPredictionControls() {
+  const predictionSelect = document.getElementById("prediction-select");
+  const predictionOpacityInput = document.getElementById("prediction-opacity");
+  const availability = predictionAvailabilityState();
+
+  if (availability === "unavailable") {
+    predictionSelect.disabled = true;
+    predictionOpacityInput.disabled = true;
+    setPredictionHelper(
+      state.split === "train"
+        ? PREDICTION_HELPERS.trainUnavailable
+        : PREDICTION_HELPERS.testUnavailable
+    );
     return;
   }
 
-  const overlayImage = document.getElementById(config.overlayImageId);
-  const opacityInput = document.getElementById("overlay-opacity");
-  const overlayItem = currentOverlaySelection();
+  predictionSelect.disabled = false;
+  predictionOpacityInput.disabled = availability !== "selected";
+  setPredictionHelper(
+    availability === "available" ? PREDICTION_HELPERS.available : ""
+  );
+}
+
+function applyLabelOverlayForPanel(config, tileId, baseItem) {
+  if (!config.labelOverlayImageId) {
+    return;
+  }
+
+  const overlayImage = document.getElementById(config.labelOverlayImageId);
+  const opacityInput = document.getElementById("label-overlay-opacity");
+  const overlayItem = currentLabelOverlaySelection();
 
   if (!baseItem || !overlayItem) {
-    clearOverlay(config);
+    clearOverlayImage(config.labelOverlayImageId);
     return;
   }
 
   overlayImage.style.opacity = String(Number(opacityInput.value) / 100);
-  setImageState(overlayImage, overlayUrl(config.kind, tileId, baseItem, overlayItem));
+  setImageState(
+    overlayImage,
+    labelOverlayUrl(config.kind, tileId, baseItem, overlayItem)
+  );
   overlayImage.onerror = () => {
-    clearOverlay(config);
+    clearOverlayImage(config.labelOverlayImageId);
+  };
+}
+
+function applyPredictionOverlayForPanel(config, tileId, baseItem) {
+  if (!config.predictionOverlayImageId) {
+    return;
+  }
+
+  const overlayImage = document.getElementById(config.predictionOverlayImageId);
+  const opacityInput = document.getElementById("prediction-opacity");
+  const sourceId = currentPredictionSelection();
+
+  if (!baseItem || !sourceId) {
+    clearOverlayImage(config.predictionOverlayImageId);
+    return;
+  }
+
+  overlayImage.style.opacity = String(Number(opacityInput.value) / 100);
+  setImageState(
+    overlayImage,
+    predictionOverlayUrl(config.kind, tileId, baseItem, sourceId)
+  );
+  overlayImage.onerror = () => {
+    clearOverlayImage(config.predictionOverlayImageId);
   };
 }
 
@@ -270,12 +364,22 @@ function setPreviewImage(config, tileId, item) {
 
   const image = document.getElementById(config.imageId);
   const status = document.getElementById(config.statusId);
-  const overlayText = currentOverlaySelection() && config.overlayImageId
-    ? ` • overlay ${selectedText("overlay-select")} at ${document.getElementById("overlay-opacity").value}%`
-    : "";
+  const overlayParts = [];
+  if (currentLabelOverlaySelection() && config.labelOverlayImageId) {
+    overlayParts.push(
+      `weak labels ${selectedText("label-overlay-select")} at ${document.getElementById("label-overlay-opacity").value}%`
+    );
+  }
+  if (currentPredictionSelection() && config.predictionOverlayImageId) {
+    overlayParts.push(
+      `predictions ${selectedText("prediction-select")} at ${document.getElementById("prediction-opacity").value}%`
+    );
+  }
+  const overlayText = overlayParts.length > 0 ? ` • ${overlayParts.join(" • ")}` : "";
 
   setImageState(image, previewUrl(config.kind, tileId, item));
-  applyOverlayForPanel(config, tileId, item);
+  applyLabelOverlayForPanel(config, tileId, item);
+  applyPredictionOverlayForPanel(config, tileId, item);
   status.textContent = `${selectedText(config.selectId)}${overlayText}`;
 
   image.onerror = () => {
@@ -397,14 +501,25 @@ function wirePreviewSelects() {
 }
 
 function wireInspectorControls() {
-  const overlaySelect = document.getElementById("overlay-select");
-  const opacityInput = document.getElementById("overlay-opacity");
+  const labelOverlaySelect = document.getElementById("label-overlay-select");
+  const labelOpacityInput = document.getElementById("label-overlay-opacity");
+  const predictionSelect = document.getElementById("prediction-select");
+  const predictionOpacityInput = document.getElementById("prediction-opacity");
   const timelineRange = document.getElementById("timeline-range");
 
-  overlaySelect.addEventListener("change", refreshPreviews);
+  labelOverlaySelect.addEventListener("change", refreshPreviews);
+  predictionSelect.addEventListener("change", () => {
+    syncPredictionControls();
+    refreshPreviews();
+  });
 
-  opacityInput.addEventListener("input", () => {
-    updateOverlayOpacityLabel();
+  labelOpacityInput.addEventListener("input", () => {
+    updateOpacityLabel("label-overlay-opacity", "label-overlay-opacity-value");
+    refreshPreviews();
+  });
+
+  predictionOpacityInput.addEventListener("input", () => {
+    updateOpacityLabel("prediction-opacity", "prediction-opacity-value");
     refreshPreviews();
   });
 
@@ -423,12 +538,26 @@ function wireInspectorControls() {
 
 function populateInspectorControls() {
   fillSelect(
-    document.getElementById("overlay-select"),
+    document.getElementById("label-overlay-select"),
     state.manifest?.labels ?? [],
     state.manifest?.defaults.overlay ?? "",
     { id: "", label: "No overlay" }
   );
-  updateOverlayOpacityLabel();
+  fillSelect(
+    document.getElementById("prediction-select"),
+    state.manifest?.predictions ?? [],
+    state.manifest?.defaults.prediction ?? "",
+    {
+      id: "",
+      label:
+        (state.manifest?.predictions ?? []).length > 0
+          ? "No prediction overlay"
+          : "Prediction unavailable",
+    }
+  );
+  updateOpacityLabel("label-overlay-opacity", "label-overlay-opacity-value");
+  updateOpacityLabel("prediction-opacity", "prediction-opacity-value");
+  syncPredictionControls();
 }
 
 async function loadManifest(tileId) {
@@ -476,12 +605,23 @@ async function loadManifest(tileId) {
 }
 
 function resetInspectorForEmptyTiles() {
-  fillSelect(document.getElementById("overlay-select"), [], "", { id: "", label: "No overlay" });
+  fillSelect(document.getElementById("label-overlay-select"), [], "", { id: "", label: "No overlay" });
+  fillSelect(
+    document.getElementById("prediction-select"),
+    [],
+    "",
+    { id: "", label: "Prediction unavailable" }
+  );
   setTimelineControlsEnabled(false);
   document.getElementById("timeline-label").textContent = "No monthly timeline available";
   document.getElementById("timeline-status").textContent = "No tiles are loaded.";
   document.getElementById("timeline-range").value = "0";
   document.getElementById("timeline-range").max = "0";
+  updateOpacityLabel("label-overlay-opacity", "label-overlay-opacity-value");
+  updateOpacityLabel("prediction-opacity", "prediction-opacity-value");
+  document.getElementById("prediction-opacity").disabled = true;
+  document.getElementById("prediction-select").disabled = true;
+  setPredictionHelper("");
 }
 
 async function loadTiles() {
@@ -542,7 +682,8 @@ async function bootstrap() {
   wireTopLevelControls();
   wirePreviewSelects();
   wireInspectorControls();
-  updateOverlayOpacityLabel();
+  updateOpacityLabel("label-overlay-opacity", "label-overlay-opacity-value");
+  updateOpacityLabel("prediction-opacity", "prediction-opacity-value");
   await loadTiles();
 }
 

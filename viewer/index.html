@@ -56,17 +56,29 @@
         <article class="overlay-card">
           <div class="timeline-copy">
             <p class="panel-kicker">Overlay</p>
-            <h2>Aligned Label Layer</h2>
+            <h2>Optional Layers</h2>
           </div>
           <label>
-            <span>Overlay source</span>
-            <select id="overlay-select"></select>
+            <span>Weak-label overlay</span>
+            <select id="label-overlay-select"></select>
           </label>
           <label class="opacity-control">
-            <span>Overlay opacity</span>
+            <span>Weak-label opacity</span>
             <div class="opacity-row">
-              <input id="overlay-opacity" type="range" min="0" max="100" step="5" value="60">
-              <output id="overlay-opacity-value" for="overlay-opacity">60%</output>
+              <input id="label-overlay-opacity" type="range" min="0" max="100" step="5" value="60">
+              <output id="label-overlay-opacity-value" for="label-overlay-opacity">60%</output>
+            </div>
+          </label>
+          <label>
+            <span>Prediction overlay</span>
+            <select id="prediction-select"></select>
+          </label>
+          <p class="control-helper" id="prediction-helper"></p>
+          <label class="opacity-control">
+            <span>Prediction opacity</span>
+            <div class="opacity-row">
+              <input id="prediction-opacity" type="range" min="0" max="100" step="5" value="70">
+              <output id="prediction-opacity-value" for="prediction-opacity">70%</output>
             </div>
           </label>
         </article>
@@ -86,7 +98,8 @@
           </div>
           <div class="image-frame image-stack">
             <img id="s2-image" class="base-image" alt="Sentinel-2 preview">
-            <img id="s2-overlay" class="overlay-image is-empty" alt="">
+            <img id="s2-label-overlay" class="overlay-image is-empty" alt="">
+            <img id="s2-prediction-overlay" class="overlay-image is-empty" alt="">
           </div>
           <p class="panel-status" id="s2-status"></p>
         </article>
@@ -104,7 +117,8 @@
           </div>
           <div class="image-frame image-stack">
             <img id="s1-image" class="base-image" alt="Sentinel-1 preview">
-            <img id="s1-overlay" class="overlay-image is-empty" alt="">
+            <img id="s1-label-overlay" class="overlay-image is-empty" alt="">
+            <img id="s1-prediction-overlay" class="overlay-image is-empty" alt="">
           </div>
           <p class="panel-status" id="s1-status"></p>
         </article>
