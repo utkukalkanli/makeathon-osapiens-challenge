@@ -25,3 +25,6 @@ install: .venv/bin/uv
 
 download_data_from_s3:
 	.venv/bin/python3 -m download_data
+
+visualize_browser:
+	.venv/bin/python3 serve_visualizer.py

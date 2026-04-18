@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>osapiens Raster Viewer</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Makeathon 2026 Bonus</p>
+          <h1>osapiens Raster Viewer</h1>
+          <p class="hero-copy">
+            Browse real challenge tiles in the browser using quick-look previews
+            from Sentinel-2, Sentinel-1, AlphaEarth Foundations, and the weak-label rasters.
+          </p>
+        </div>
+        <div class="hero-note">
+          <strong>Preview notes</strong>
+          <p>These are lightweight PNG renderings of the local GeoTIFF files.</p>
+          <p>Label overlays on Sentinel-2 and Sentinel-1 are reprojected onto the active image grid so you can inspect alignment in the browser.</p>
+        </div>
+      </header>
+
+      <section class="control-bar">
+        <label>
+          <span>Split</span>
+          <select id="split-select"></select>
+        </label>
+        <label class="tile-picker">
+          <span>Tile</span>
+          <select id="tile-select"></select>
+        </label>
+        <div class="dataset-summary" id="dataset-summary">Loading dataset…</div>
+      </section>
+
+      <section class="inspector-bar">
+        <article class="timeline-card">
+          <div class="timeline-copy">
+            <p class="panel-kicker">Time Scrubber</p>
+            <h2>Step Through Available Months</h2>
+          </div>
+          <div class="timeline-row">
+            <button id="timeline-prev" type="button" class="nav-button">Prev</button>
+            <input id="timeline-range" type="range" min="0" max="0" step="1" value="0">
+            <button id="timeline-next" type="button" class="nav-button">Next</button>
+          </div>
+          <div class="timeline-meta">
+            <strong id="timeline-label">No monthly timeline available</strong>
+            <p id="timeline-status">The scrubber uses the union of available Sentinel-1 and Sentinel-2 months for the current tile.</p>
+          </div>
+        </article>
+
+        <article class="overlay-card">
+          <div class="timeline-copy">
+            <p class="panel-kicker">Overlay</p>
+            <h2>Aligned Label Layer</h2>
+          </div>
+          <label>
+            <span>Overlay source</span>
+            <select id="overlay-select"></select>
+          </label>
+          <label class="opacity-control">
+            <span>Overlay opacity</span>
+            <div class="opacity-row">
+              <input id="overlay-opacity" type="range" min="0" max="100" step="5" value="60">
+              <output id="overlay-opacity-value" for="overlay-opacity">60%</output>
+            </div>
+          </label>
+        </article>
+      </section>
+
+      <section class="preview-grid">
+        <article class="panel-card">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Optical</p>
+              <h2>Sentinel-2 True Color</h2>
+            </div>
+            <label>
+              <span>Observation</span>
+              <select id="s2-select"></select>
+            </label>
+          </div>
+          <div class="image-frame image-stack">
+            <img id="s2-image" class="base-image" alt="Sentinel-2 preview">
+            <img id="s2-overlay" class="overlay-image is-empty" alt="">
+          </div>
+          <p class="panel-status" id="s2-status"></p>
+        </article>
+
+        <article class="panel-card">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Radar</p>
+              <h2>Sentinel-1 Backscatter</h2>
+            </div>
+            <label>
+              <span>Observation</span>
+              <select id="s1-select"></select>
+            </label>
+          </div>
+          <div class="image-frame image-stack">
+            <img id="s1-image" class="base-image" alt="Sentinel-1 preview">
+            <img id="s1-overlay" class="overlay-image is-empty" alt="">
+          </div>
+          <p class="panel-status" id="s1-status"></p>
+        </article>
+
+        <article class="panel-card">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Embeddings</p>
+              <h2>AEF Pseudo-RGB</h2>
+            </div>
+            <label>
+              <span>Year</span>
+              <select id="aef-select"></select>
+            </label>
+          </div>
+          <div class="image-frame">
+            <img id="aef-image" alt="AEF preview">
+          </div>
+          <p class="panel-status" id="aef-status"></p>
+        </article>
+
+        <article class="panel-card">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Labels</p>
+              <h2>Weak-Label Preview</h2>
+            </div>
+            <label>
+              <span>Source</span>
+              <select id="label-select"></select>
+            </label>
+          </div>
+          <div class="image-frame">
+            <img id="label-image" alt="Label preview">
+          </div>
+          <p class="panel-status" id="label-status"></p>
+        </article>
+      </section>
+    </div>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+  </html>

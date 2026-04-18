@@ -19,13 +19,14 @@ import argparse
 import json
 from pathlib import Path
 
+import mlflow
 import numpy as np
 import torch
 
-from .dataset import FullTileDataset, TemporalFullTileDataset
 from .inventory import test_tiles, train_tiles
-from .model import SiameseChangeUNet, TemporalChangeUNet
-from .train import (
+from .unet.dataset import FullTileDataset, TemporalFullTileDataset
+from .unet.model import SiameseChangeUNet, TemporalChangeUNet
+from .unet.train import (
     DEFAULT_VAL_TILES,
     predict_full,
     predict_full_temporal,
@@ -95,6 +96,19 @@ def main(
     w_t = 1.0 - w_s
     print(f"ensemble weights: siamese={w_s:.2f}  temporal={w_t:.2f}")
 
+    mlflow.set_experiment("deforestation")
+    run_name = f"ensemble:{Path(siamese_ckpt).stem}+{Path(temporal_ckpt).stem}"
+    mlflow.start_run(run_name=run_name)
+    mlflow.set_tag("stage", "ensemble")
+    mlflow.log_params({
+        "siamese_ckpt": siamese_ckpt,
+        "temporal_ckpt": temporal_ckpt,
+        "weight_siamese": w_s,
+        "weight_temporal": w_t,
+        "crop": crop,
+        "overlap": overlap,
+    })
+
     # --- Val evaluation: load both dataset flavors over the same tiles. ---
     val_tiles_list = [t for t in train_tiles() if t.tile_id in DEFAULT_VAL_TILES]
     val_s = FullTileDataset(val_tiles_list)
@@ -134,6 +148,18 @@ def main(
     best_s = max(sweep["siamese"], key=lambda d: d["f1"])
     best_t = max(sweep["temporal"], key=lambda d: d["f1"])
     best_e = max(sweep["ensemble"], key=lambda d: d["f1"])
+    for s, t, e in zip(sweep["siamese"], sweep["temporal"], sweep["ensemble"]):
+        step = int(round(s["thr"] * 100))
+        mlflow.log_metric("sweep_siamese_f1", s["f1"], step=step)
+        mlflow.log_metric("sweep_temporal_f1", t["f1"], step=step)
+        mlflow.log_metric("sweep_ensemble_f1", e["f1"], step=step)
+    mlflow.log_metrics({
+        "best_siamese_f1": best_s["f1"], "best_siamese_thr": best_s["thr"],
+        "best_temporal_f1": best_t["f1"], "best_temporal_thr": best_t["thr"],
+        "best_ensemble_f1": best_e["f1"], "best_ensemble_thr": best_e["thr"],
+        "ensemble_gain_vs_siamese": best_e["f1"] - best_s["f1"],
+        "ensemble_gain_vs_temporal": best_e["f1"] - best_t["f1"],
+    })
     print("\n=== Macro F1 vs threshold (best starred) ===")
     print(" thr   siamese  temporal  ensemble")
     for s, t, e in zip(sweep["siamese"], sweep["temporal"], sweep["ensemble"]):
@@ -169,9 +195,15 @@ def main(
         "per_tile": per_tile_out,
     }
     Path("checkpoints").mkdir(exist_ok=True)
-    with open("checkpoints/analysis_ensemble.json", "w") as f:
+    summary_p = Path("checkpoints/analysis_ensemble.json")
+    with open(summary_p, "w") as f:
         json.dump(summary, f, indent=2, default=float)
     print("saved checkpoints/analysis_ensemble.json")
+
+    for tid, s in per_tile_out.items():
+        mlflow.log_metric(f"f1_{tid}_ensemble", s["ensemble"]["f1"])
+        mlflow.log_metric(f"iou_{tid}_ensemble", s["ensemble"]["iou"])
+    mlflow.log_artifact(str(summary_p))
 
     # --- Optional: ensemble predictions on the held-out test tiles. ---
     if predict_test:
@@ -219,6 +251,8 @@ def main(
                 print(f"    wrote {geo_p}")
             except ValueError as e:
                 print(f"    skip {tid_s}: {e}")
+
+    mlflow.end_run()
 
 
 if __name__ == "__main__":

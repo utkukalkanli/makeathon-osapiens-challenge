@@ -8,10 +8,10 @@ import numpy as np
 import rasterio
 import torch
 
-from .dataset import FullTileDataset, TemporalFullTileDataset
 from .inventory import test_tiles, train_tiles
-from .model import SiameseChangeUNet, TemporalChangeUNet
-from .train import predict_full, predict_full_temporal
+from .unet.dataset import FullTileDataset, TemporalFullTileDataset
+from .unet.model import SiameseChangeUNet, TemporalChangeUNet
+from .unet.train import predict_full, predict_full_temporal
 
 SUBMISSION_DIR = Path("submission")
 

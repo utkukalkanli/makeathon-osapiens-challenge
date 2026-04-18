@@ -13,13 +13,14 @@ import argparse
 import json
 from pathlib import Path
 
+import mlflow
 import numpy as np
 import torch
 
-from .dataset import FullTileDataset, TemporalFullTileDataset
 from .inventory import train_tiles
-from .model import SiameseChangeUNet, TemporalChangeUNet
-from .train import DEFAULT_VAL_TILES, predict_full, predict_full_temporal
+from .unet.dataset import FullTileDataset, TemporalFullTileDataset
+from .unet.model import SiameseChangeUNet, TemporalChangeUNet
+from .unet.train import DEFAULT_VAL_TILES, predict_full, predict_full_temporal
 
 
 def _scores(prob: np.ndarray, target: np.ndarray, thr: float):
@@ -79,6 +80,10 @@ def main(
     sd = torch.load(ckpt, map_location=device, weights_only=False)
     kind = sd.get("model_kind", "siamese")
     in_ch = sd.get("in_channels", 64)
+    mlflow.set_experiment("deforestation")
+    mlflow.start_run(run_name=f"analyze:{Path(ckpt).stem}")
+    mlflow.set_tags({"stage": "analyze", "model_kind": kind})
+    mlflow.log_params({"ckpt": ckpt, "in_channels": in_ch, "crop": crop, "overlap": overlap})
     if kind == "temporal":
         model = TemporalChangeUNet(in_channels=in_ch, base=32).to(device)
     else:
@@ -127,6 +132,21 @@ def main(
 
     best_plain = max(sweep["plain"], key=lambda d: d["f1"])
     best_tta = max(sweep["tta"], key=lambda d: d["f1"])
+    for p, t in zip(sweep["plain"], sweep["tta"]):
+        step = int(round(p["thr"] * 100))
+        mlflow.log_metric("sweep_plain_f1", p["f1"], step=step)
+        mlflow.log_metric("sweep_plain_iou", p["iou"], step=step)
+        mlflow.log_metric("sweep_tta_f1", t["f1"], step=step)
+        mlflow.log_metric("sweep_tta_iou", t["iou"], step=step)
+    mlflow.log_metrics({
+        "best_plain_f1": best_plain["f1"],
+        "best_plain_iou": best_plain["iou"],
+        "best_plain_thr": best_plain["thr"],
+        "best_tta_f1": best_tta["f1"],
+        "best_tta_iou": best_tta["iou"],
+        "best_tta_thr": best_tta["thr"],
+        "tta_gain_f1": best_tta["f1"] - best_plain["f1"],
+    })
     print("\n=== Threshold sweep (macro over val tiles) ===")
     print(f"  plain: best f1={best_plain['f1']:.3f} iou={best_plain['iou']:.3f} @ thr={best_plain['thr']}")
     print(f"  TTA  : best f1={best_tta['f1']:.3f} iou={best_tta['iou']:.3f} @ thr={best_tta['thr']}")
@@ -182,6 +202,12 @@ def main(
             "per_tile_at_best_tta": per_tile,
         }, f, indent=2, default=float)
     print(f"\nsaved {out_p}")
+
+    for tid, s in per_tile.items():
+        mlflow.log_metric(f"f1_{tid}_tta", s["f1"])
+        mlflow.log_metric(f"iou_{tid}_tta", s["iou"])
+    mlflow.log_artifact(str(out_p))
+    mlflow.end_run()
 
 
 if __name__ == "__main__":

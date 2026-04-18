@@ -6,18 +6,21 @@ import json
 import time
 from pathlib import Path
 
+import mlflow
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import ConcatDataset, DataLoader
 
 from .dataset import (
     AEFCropDataset,
     FullTileDataset,
+    PseudoAEFCropDataset,
+    PseudoTemporalAEFCropDataset,
     TemporalAEFCropDataset,
     TemporalFullTileDataset,
 )
-from .inventory import train_tiles
-from .losses import BCETverskyLoss
+from ..inventory import test_tiles, train_tiles
+from ..losses import BCETverskyLoss
 from .model import SiameseChangeUNet, TemporalChangeUNet, count_params
 
 # Fixed val tiles chosen to span regions and positive-rate levels
@@ -128,6 +131,8 @@ def main(
     seed: int = 0,
     out_name: str = "siamese_unet",
     model_kind: str = "siamese",  # "siamese" or "temporal"
+    pseudo_dir: str | None = None,      # if set, mix test-tile pseudo-label crops
+    pseudo_crops_per_tile: int = 16,    # per-test-tile crops per epoch
 ):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -139,22 +144,42 @@ def main(
     print(f"train tiles: {len(tr)}  val tiles: {[t.tile_id for t in va]}  model={model_kind}")
 
     if model_kind == "temporal":
-        train_ds = TemporalAEFCropDataset(
+        real_ds = TemporalAEFCropDataset(
             tr, crop_size=crop_size, crops_per_tile=crops_per_tile,
             positive_crop_prob=0.75, augment=True,
         )
         val_ds = TemporalFullTileDataset(va)
-        in_channels = train_ds[0][0].shape[1]  # (T, C, H, W)
+        in_channels = real_ds[0][0].shape[1]  # (T, C, H, W)
         model = TemporalChangeUNet(in_channels=in_channels, base=32).to(device)
     else:
-        train_ds = AEFCropDataset(
+        real_ds = AEFCropDataset(
             tr, crop_size=crop_size, crops_per_tile=crops_per_tile,
             positive_crop_prob=0.75, augment=True,
         )
         val_ds = FullTileDataset(va)
-        in_channels = train_ds[0][0].shape[0]  # (C, H, W)
+        in_channels = real_ds[0][0].shape[0]  # (C, H, W)
         model = SiameseChangeUNet(in_channels=in_channels, base=32).to(device)
-    print(f"in_channels: {in_channels}")
+
+    if pseudo_dir is not None:
+        test_ts = test_tiles()
+        if model_kind == "temporal":
+            pseudo_ds = PseudoTemporalAEFCropDataset(
+                test_ts, pseudo_dir=pseudo_dir,
+                crop_size=crop_size, crops_per_tile=pseudo_crops_per_tile,
+                positive_crop_prob=0.75, augment=True,
+            )
+        else:
+            pseudo_ds = PseudoAEFCropDataset(
+                test_ts, pseudo_dir=pseudo_dir,
+                crop_size=crop_size, crops_per_tile=pseudo_crops_per_tile,
+                positive_crop_prob=0.75, augment=True,
+            )
+        train_ds = ConcatDataset([real_ds, pseudo_ds])
+        print(f"pseudo: {len(test_ts)} test tiles x {pseudo_crops_per_tile} crops/epoch "
+              f"= {len(pseudo_ds)} extra samples")
+    else:
+        train_ds = real_ds
+    print(f"in_channels: {in_channels}  total crops/epoch: {len(train_ds)}")
 
     loader = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True,
@@ -168,6 +193,23 @@ def main(
                              alpha=0.3, beta=0.7, pos_weight=3.0)
 
     CKPT_DIR.mkdir(exist_ok=True)
+    mlflow.set_experiment("deforestation")
+    mlflow.start_run(run_name=out_name)
+    mlflow.set_tags({"stage": "train", "model_kind": model_kind})
+    mlflow.log_params({
+        "model_kind": model_kind,
+        "in_channels": in_channels,
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "lr": lr,
+        "crop_size": crop_size,
+        "crops_per_tile": crops_per_tile,
+        "seed": seed,
+        "val_tiles": ",".join(val_tile_ids),
+        "params": count_params(model),
+        "pseudo_dir": pseudo_dir or "",
+        "pseudo_crops_per_tile": pseudo_crops_per_tile if pseudo_dir else 0,
+    })
     best_f1 = -1.0
     history = []
     for ep in range(1, epochs + 1):
@@ -176,17 +218,19 @@ def main(
         losses = []
         for batch in loader:
             if model_kind == "temporal":
-                series, tgt = batch
+                series, tgt, w = batch
                 series = series.to(device, non_blocking=True)
                 tgt = tgt.to(device, non_blocking=True)
+                w = w.to(device, non_blocking=True)
                 logits = model(series)
             else:
-                pre, post, tgt = batch
+                pre, post, tgt, w = batch
                 pre = pre.to(device, non_blocking=True)
                 post = post.to(device, non_blocking=True)
                 tgt = tgt.to(device, non_blocking=True)
+                w = w.to(device, non_blocking=True)
                 logits = model(pre, post)
-            loss = loss_fn(logits, tgt)
+            loss = loss_fn(logits, tgt, weight=w)
             opt.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -205,8 +249,19 @@ def main(
         )
         history.append({"epoch": ep, "train_loss": train_loss, **metrics})
 
+        mlflow.log_metrics({
+            "train_loss": train_loss,
+            "val_macro_f1": metrics["macro_f1"],
+            "val_macro_iou": metrics["macro_iou"],
+            "lr": opt.param_groups[0]["lr"],
+        }, step=ep)
+        for tid, m in metrics["per_tile"].items():
+            mlflow.log_metric(f"f1_{tid}", m["f1"], step=ep)
+            mlflow.log_metric(f"iou_{tid}", m["iou"], step=ep)
+
         if metrics["macro_f1"] > best_f1:
             best_f1 = metrics["macro_f1"]
+            ckpt_path = CKPT_DIR / f"{out_name}_best.pt"
             torch.save({
                 "model": model.state_dict(),
                 "epoch": ep,
@@ -214,12 +269,17 @@ def main(
                 "val_tiles": list(val_tile_ids),
                 "model_kind": model_kind,
                 "in_channels": in_channels,
-            }, CKPT_DIR / f"{out_name}_best.pt")
+            }, ckpt_path)
             print(f"  ↳ saved new best (f1={best_f1:.3f})")
+            mlflow.log_metric("best_val_macro_f1", best_f1, step=ep)
 
-    with open(CKPT_DIR / f"{out_name}_history.json", "w") as f:
+    hist_path = CKPT_DIR / f"{out_name}_history.json"
+    with open(hist_path, "w") as f:
         json.dump(history, f, indent=2, default=float)
     print(f"done. best val_f1 = {best_f1:.3f}")
+    mlflow.log_artifact(str(hist_path))
+    mlflow.log_artifact(str(CKPT_DIR / f"{out_name}_best.pt"))
+    mlflow.end_run()
 
 
 if __name__ == "__main__":
@@ -233,5 +293,8 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out_name", default="siamese_unet")
     ap.add_argument("--model_kind", default="siamese", choices=["siamese", "temporal"])
+    ap.add_argument("--pseudo_dir", default=None,
+                    help="If set, mix pseudo-labeled test tiles into training.")
+    ap.add_argument("--pseudo_crops_per_tile", type=int, default=16)
     args = ap.parse_args()
     main(**vars(args))

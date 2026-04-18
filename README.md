@@ -67,3 +67,35 @@ data/makeathon-challenge/
 ```
 
 ## Explore the Notebook for the Full Challenge Walkthrough
+
+## Browser Visualization Tool
+
+For the optional bonus work, there is now a lightweight local browser viewer for
+quick qualitative inspection of real dataset tiles.
+
+Start it with:
+
+```bash
+make visualize_browser
+```
+
+Or directly:
+
+```bash
+.venv/bin/python3 serve_visualizer.py --host 127.0.0.1 --port 8765
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8765
+```
+
+The first version supports:
+
+- Sentinel-2 true-color previews
+- Sentinel-1 backscatter previews
+- AlphaEarth Foundations pseudo-RGB previews using bands 6, 42, and 49
+- Weak-label previews for GLAD-S2, GLAD-L, RADD, and fused train labels
+- A per-tile month scrubber that steps through the available Sentinel-1 and Sentinel-2 timeline
+- Reprojected label overlays on top of the active Sentinel-2 and Sentinel-1 views

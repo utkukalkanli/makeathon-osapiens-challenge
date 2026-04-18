@@ -13,12 +13,22 @@ env/
 # Data, caches, trained artifacts — never commit
 data/
 cache/
+cache_clay/
 checkpoints/
 submission/
+pseudo/
 
 # Logs
 *.log
 
+# MLflow tracking store
+mlruns/
+mlartifacts/
+
 # OS
 .DS_Store
 Thumbs.db
+
+.codex
+.claude
+

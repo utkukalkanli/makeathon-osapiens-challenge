@@ -12,9 +12,9 @@ import rasterio
 import torch
 from torch.utils.data import Dataset
 
-from .inventory import Tile, train_tiles
-from .labels import fused_labels, load_reference_grid
-from .s2_features import s2_annual_features
+from ..inventory import Tile, train_tiles
+from ..labels import fused_labels, load_reference_grid
+from ..s2_features import s2_annual_features
 
 CACHE_DIR = Path("cache")
 # Bump when the cache schema changes so stale .npz files are rebuilt.
@@ -98,7 +98,7 @@ def build_tile_tensors(
 
 
 def precompute_cache(split: str = "train", pre_year: int = 2020, post_year: int = 2025):
-    from .inventory import list_tiles
+    from ..inventory import list_tiles
 
     for t in list_tiles(split):
         print(f"[{split}] caching {t.tile_id} ...", flush=True)
@@ -194,10 +194,12 @@ class AEFCropDataset(Dataset):
                 soft = soft[:, ::-1].copy()
 
         target = soft if self.use_soft_target else hard
+        weight = np.ones_like(target, dtype=np.float32)
         return (
             torch.from_numpy(pre).float(),
             torch.from_numpy(post).float(),
             torch.from_numpy(target).float().unsqueeze(0),
+            torch.from_numpy(weight).float().unsqueeze(0),
         )
 
 
@@ -304,9 +306,11 @@ class TemporalAEFCropDataset(Dataset):
                 soft = soft[:, ::-1].copy()
 
         target = soft if self.use_soft_target else hard
+        weight = np.ones_like(target, dtype=np.float32)
         return (
             torch.from_numpy(series).float(),
             torch.from_numpy(target).float().unsqueeze(0),
+            torch.from_numpy(weight).float().unsqueeze(0),
         )
 
 
@@ -338,12 +342,169 @@ class TemporalFullTileDataset(Dataset):
         return t.tile_id, series, hard
 
 
+def _load_pseudo(pseudo_dir: Path, tile_id: str) -> dict[str, np.ndarray]:
+    p = Path(pseudo_dir) / f"{tile_id}.npz"
+    with np.load(p) as f:
+        return {"hard": f["hard"].astype(np.float32),
+                "weight": f["weight"].astype(np.float32)}
+
+
+class PseudoAEFCropDataset(Dataset):
+    """Siamese crops from test tiles using ensemble pseudo-labels.
+
+    Yields (pre, post, target, weight) — weight is 0 on ignored pixels so
+    the masked BCE/Tversky skip them entirely.
+    """
+
+    def __init__(
+        self,
+        tiles: list[Tile],
+        pseudo_dir: str | Path,
+        crop_size: int = 256,
+        crops_per_tile: int = 16,
+        positive_crop_prob: float = 0.75,
+        augment: bool = True,
+        pre_year: int = 2020,
+        post_year: int = 2025,
+    ):
+        self.tiles = tiles
+        self.crop = crop_size
+        self.crops_per_tile = crops_per_tile
+        self.positive_crop_prob = positive_crop_prob
+        self.augment = augment
+        self._data = []
+        for t in tiles:
+            d = dict(build_tile_tensors(t, pre_year=pre_year, post_year=post_year))
+            d.update(_load_pseudo(pseudo_dir, t.tile_id))
+            self._data.append(d)
+
+    def __len__(self) -> int:
+        return len(self.tiles) * self.crops_per_tile
+
+    def _sample_crop(self, d, rng):
+        _, h, w = d["pre"].shape
+        cs = self.crop
+        pos_mask = (d["hard"] > 0) & (d["weight"] > 0)
+        if rng.random() < self.positive_crop_prob and pos_mask.any():
+            ys, xs = np.where(pos_mask)
+            idx = rng.integers(0, len(ys))
+            cy, cx = int(ys[idx]), int(xs[idx])
+            y = int(np.clip(cy - cs // 2, 0, h - cs))
+            x = int(np.clip(cx - cs // 2, 0, w - cs))
+        else:
+            y = int(rng.integers(0, h - cs + 1))
+            x = int(rng.integers(0, w - cs + 1))
+        return y, x
+
+    def __getitem__(self, idx):
+        tile_idx = idx % len(self.tiles)
+        d = self._data[tile_idx]
+        rng = np.random.default_rng()
+        y, x = self._sample_crop(d, rng)
+        cs = self.crop
+
+        pre = d["pre"][:, y : y + cs, x : x + cs]
+        post = d["post"][:, y : y + cs, x : x + cs]
+        hard = d["hard"][y : y + cs, x : x + cs]
+        weight = d["weight"][y : y + cs, x : x + cs]
+
+        if self.augment:
+            k = int(rng.integers(0, 4))
+            pre = np.rot90(pre, k=k, axes=(1, 2)).copy()
+            post = np.rot90(post, k=k, axes=(1, 2)).copy()
+            hard = np.rot90(hard, k=k, axes=(0, 1)).copy()
+            weight = np.rot90(weight, k=k, axes=(0, 1)).copy()
+            if rng.random() < 0.5:
+                pre = pre[:, :, ::-1].copy()
+                post = post[:, :, ::-1].copy()
+                hard = hard[:, ::-1].copy()
+                weight = weight[:, ::-1].copy()
+
+        return (
+            torch.from_numpy(pre).float(),
+            torch.from_numpy(post).float(),
+            torch.from_numpy(hard).float().unsqueeze(0),
+            torch.from_numpy(weight).float().unsqueeze(0),
+        )
+
+
+class PseudoTemporalAEFCropDataset(Dataset):
+    """Temporal crops from test tiles with ensemble pseudo-labels + ignore mask."""
+
+    def __init__(
+        self,
+        tiles: list[Tile],
+        pseudo_dir: str | Path,
+        crop_size: int = 256,
+        crops_per_tile: int = 16,
+        positive_crop_prob: float = 0.75,
+        augment: bool = True,
+        pre_year: int = 2020,
+        post_year: int = 2025,
+    ):
+        self.tiles = tiles
+        self.crop = crop_size
+        self.crops_per_tile = crops_per_tile
+        self.positive_crop_prob = positive_crop_prob
+        self.augment = augment
+        self._data = []
+        for t in tiles:
+            d = dict(build_tile_tensors(t, pre_year=pre_year, post_year=post_year))
+            d.update(_load_pseudo(pseudo_dir, t.tile_id))
+            self._data.append(d)
+
+    def __len__(self) -> int:
+        return len(self.tiles) * self.crops_per_tile
+
+    def _sample_crop(self, d, rng):
+        _, _, h, w = d["series"].shape
+        cs = self.crop
+        pos_mask = (d["hard"] > 0) & (d["weight"] > 0)
+        if rng.random() < self.positive_crop_prob and pos_mask.any():
+            ys, xs = np.where(pos_mask)
+            idx = rng.integers(0, len(ys))
+            cy, cx = int(ys[idx]), int(xs[idx])
+            y = int(np.clip(cy - cs // 2, 0, h - cs))
+            x = int(np.clip(cx - cs // 2, 0, w - cs))
+        else:
+            y = int(rng.integers(0, h - cs + 1))
+            x = int(rng.integers(0, w - cs + 1))
+        return y, x
+
+    def __getitem__(self, idx):
+        tile_idx = idx % len(self.tiles)
+        d = self._data[tile_idx]
+        rng = np.random.default_rng()
+        y, x = self._sample_crop(d, rng)
+        cs = self.crop
+
+        series = d["series"][:, :, y : y + cs, x : x + cs]
+        hard = d["hard"][y : y + cs, x : x + cs]
+        weight = d["weight"][y : y + cs, x : x + cs]
+
+        if self.augment:
+            k = int(rng.integers(0, 4))
+            series = np.rot90(series, k=k, axes=(2, 3)).copy()
+            hard = np.rot90(hard, k=k, axes=(0, 1)).copy()
+            weight = np.rot90(weight, k=k, axes=(0, 1)).copy()
+            if rng.random() < 0.5:
+                series = series[:, :, :, ::-1].copy()
+                hard = hard[:, ::-1].copy()
+                weight = weight[:, ::-1].copy()
+
+        return (
+            torch.from_numpy(series).float(),
+            torch.from_numpy(hard).float().unsqueeze(0),
+            torch.from_numpy(weight).float().unsqueeze(0),
+        )
+
+
 if __name__ == "__main__":
     ts = train_tiles()
     ds = AEFCropDataset(ts[:2], crop_size=256, crops_per_tile=4)
-    pre, post, tgt = ds[0]
-    print("siamese crop:", pre.shape, post.shape, tgt.shape, "target mean:", tgt.mean().item())
+    pre, post, tgt, w = ds[0]
+    print("siamese crop:", pre.shape, post.shape, tgt.shape, w.shape, "target mean:", tgt.mean().item())
 
     tds = TemporalAEFCropDataset(ts[:2], crop_size=256, crops_per_tile=4)
-    series, tgt = tds[0]
-    print("temporal crop:", series.shape, tgt.shape, "target mean:", tgt.mean().item())
+    series, tgt, w = tds[0]
+    print("temporal crop:", series.shape, tgt.shape, w.shape, "target mean:", tgt.mean().item())
