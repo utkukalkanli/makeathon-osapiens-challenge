@@ -10,10 +10,15 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from .dataset import AEFCropDataset, FullTileDataset
+from .dataset import (
+    AEFCropDataset,
+    FullTileDataset,
+    TemporalAEFCropDataset,
+    TemporalFullTileDataset,
+)
 from .inventory import train_tiles
 from .losses import BCETverskyLoss
-from .model import SiameseChangeUNet, count_params
+from .model import SiameseChangeUNet, TemporalChangeUNet, count_params
 
 # Fixed val tiles chosen to span regions and positive-rate levels
 # (see `python -m src.labels` / dataset inspection).
@@ -35,19 +40,35 @@ def _iou_f1(pred: torch.Tensor, target: torch.Tensor, thr: float = 0.5):
 
 
 @torch.no_grad()
-def evaluate(model, val_ds: FullTileDataset, device: str, crop: int = 512, overlap: int = 64):
+def evaluate(model, val_ds, device: str, crop: int = 512, overlap: int = 64, kind: str = "siamese"):
     """Tiled inference over full AEF tiles; returns dict of metrics."""
     model.eval()
     per_tile = {}
-    for tile_id, pre, post, hard in val_ds:
-        pre = pre.to(device)
-        post = post.to(device)
-        prob = predict_full(model, pre, post, crop=crop, overlap=overlap)
+    for item in val_ds:
+        if kind == "temporal":
+            tile_id, series, hard = item
+            series = series.to(device)
+            prob = predict_full_temporal(model, series, crop=crop, overlap=overlap)
+        else:
+            tile_id, pre, post, hard = item
+            pre = pre.to(device)
+            post = post.to(device)
+            prob = predict_full(model, pre, post, crop=crop, overlap=overlap)
         iou, f1 = _iou_f1(prob.cpu(), hard)
         per_tile[tile_id] = {"iou": iou, "f1": f1, "pos_rate": float(hard.mean())}
     macro_iou = float(np.mean([v["iou"] for v in per_tile.values()]))
     macro_f1 = float(np.mean([v["f1"] for v in per_tile.values()]))
     return {"per_tile": per_tile, "macro_iou": macro_iou, "macro_f1": macro_f1}
+
+
+def _tile_positions(H: int, W: int, crop: int, stride: int):
+    ys = list(range(0, max(1, H - crop + 1), stride))
+    xs = list(range(0, max(1, W - crop + 1), stride))
+    if ys[-1] + crop < H:
+        ys.append(H - crop)
+    if xs[-1] + crop < W:
+        xs.append(W - crop)
+    return ys, xs
 
 
 @torch.no_grad()
@@ -58,22 +79,39 @@ def predict_full(
     crop: int = 512,
     overlap: int = 64,
 ) -> torch.Tensor:
-    """Sliding-window inference across a full tile. Returns H,W probability map."""
+    """Sliding-window inference for siamese (pre, post). Returns H,W probability map."""
     _, H, W = pre.shape
     stride = crop - overlap
     prob = torch.zeros((H, W), device=pre.device)
     weight = torch.zeros((H, W), device=pre.device)
-    ys = list(range(0, max(1, H - crop + 1), stride))
-    xs = list(range(0, max(1, W - crop + 1), stride))
-    if ys[-1] + crop < H:
-        ys.append(H - crop)
-    if xs[-1] + crop < W:
-        xs.append(W - crop)
+    ys, xs = _tile_positions(H, W, crop, stride)
     for y in ys:
         for x in xs:
             pre_c = pre[:, y : y + crop, x : x + crop].unsqueeze(0)
             post_c = post[:, y : y + crop, x : x + crop].unsqueeze(0)
             logits = model(pre_c, post_c)[0, 0]
+            prob[y : y + crop, x : x + crop] += torch.sigmoid(logits)
+            weight[y : y + crop, x : x + crop] += 1
+    return prob / weight.clamp_min(1)
+
+
+@torch.no_grad()
+def predict_full_temporal(
+    model,
+    series: torch.Tensor,   # (T, C, H, W)
+    crop: int = 512,
+    overlap: int = 64,
+) -> torch.Tensor:
+    """Sliding-window inference for temporal model. Returns H,W probability map."""
+    _, _, H, W = series.shape
+    stride = crop - overlap
+    prob = torch.zeros((H, W), device=series.device)
+    weight = torch.zeros((H, W), device=series.device)
+    ys, xs = _tile_positions(H, W, crop, stride)
+    for y in ys:
+        for x in xs:
+            c = series[:, :, y : y + crop, x : x + crop].unsqueeze(0)
+            logits = model(c)[0, 0]
             prob[y : y + crop, x : x + crop] += torch.sigmoid(logits)
             weight[y : y + crop, x : x + crop] += 1
     return prob / weight.clamp_min(1)
@@ -89,6 +127,7 @@ def main(
     num_workers: int = 4,
     seed: int = 0,
     out_name: str = "siamese_unet",
+    model_kind: str = "siamese",  # "siamese" or "temporal"
 ):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -97,20 +136,28 @@ def main(
     all_tiles = train_tiles()
     tr = [t for t in all_tiles if t.tile_id not in val_tile_ids]
     va = [t for t in all_tiles if t.tile_id in val_tile_ids]
-    print(f"train tiles: {len(tr)}  val tiles: {[t.tile_id for t in va]}")
+    print(f"train tiles: {len(tr)}  val tiles: {[t.tile_id for t in va]}  model={model_kind}")
 
-    train_ds = AEFCropDataset(
-        tr, crop_size=crop_size, crops_per_tile=crops_per_tile,
-        positive_crop_prob=0.75, augment=True,
-    )
-    val_ds = FullTileDataset(va)
+    if model_kind == "temporal":
+        train_ds = TemporalAEFCropDataset(
+            tr, crop_size=crop_size, crops_per_tile=crops_per_tile,
+            positive_crop_prob=0.75, augment=True,
+        )
+        val_ds = TemporalFullTileDataset(va)
+        model = TemporalChangeUNet(in_channels=64, base=32).to(device)
+    else:
+        train_ds = AEFCropDataset(
+            tr, crop_size=crop_size, crops_per_tile=crops_per_tile,
+            positive_crop_prob=0.75, augment=True,
+        )
+        val_ds = FullTileDataset(va)
+        model = SiameseChangeUNet(in_channels=64, base=32).to(device)
 
     loader = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True,
         num_workers=num_workers, drop_last=True, persistent_workers=num_workers > 0,
     )
 
-    model = SiameseChangeUNet(in_channels=64, base=32).to(device)
     print(f"model params: {count_params(model):,}")
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
@@ -124,11 +171,18 @@ def main(
         model.train()
         t0 = time.time()
         losses = []
-        for pre, post, tgt in loader:
-            pre = pre.to(device, non_blocking=True)
-            post = post.to(device, non_blocking=True)
-            tgt = tgt.to(device, non_blocking=True)
-            logits = model(pre, post)
+        for batch in loader:
+            if model_kind == "temporal":
+                series, tgt = batch
+                series = series.to(device, non_blocking=True)
+                tgt = tgt.to(device, non_blocking=True)
+                logits = model(series)
+            else:
+                pre, post, tgt = batch
+                pre = pre.to(device, non_blocking=True)
+                post = post.to(device, non_blocking=True)
+                tgt = tgt.to(device, non_blocking=True)
+                logits = model(pre, post)
             loss = loss_fn(logits, tgt)
             opt.zero_grad(set_to_none=True)
             loss.backward()
@@ -138,7 +192,7 @@ def main(
         sched.step()
 
         train_loss = float(np.mean(losses))
-        metrics = evaluate(model, val_ds, device=device)
+        metrics = evaluate(model, val_ds, device=device, kind=model_kind)
         dt = time.time() - t0
         print(
             f"ep {ep:03d}  loss {train_loss:.4f}  "
@@ -155,6 +209,7 @@ def main(
                 "epoch": ep,
                 "metrics": metrics,
                 "val_tiles": list(val_tile_ids),
+                "model_kind": model_kind,
             }, CKPT_DIR / f"{out_name}_best.pt")
             print(f"  ↳ saved new best (f1={best_f1:.3f})")
 
@@ -173,5 +228,6 @@ if __name__ == "__main__":
     ap.add_argument("--num_workers", type=int, default=4)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out_name", default="siamese_unet")
+    ap.add_argument("--model_kind", default="siamese", choices=["siamese", "temporal"])
     args = ap.parse_args()
     main(**vars(args))

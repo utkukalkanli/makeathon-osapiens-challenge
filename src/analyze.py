@@ -16,10 +16,10 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .dataset import FullTileDataset
+from .dataset import FullTileDataset, TemporalFullTileDataset
 from .inventory import train_tiles
-from .model import SiameseChangeUNet
-from .train import DEFAULT_VAL_TILES, predict_full
+from .model import SiameseChangeUNet, TemporalChangeUNet
+from .train import DEFAULT_VAL_TILES, predict_full, predict_full_temporal
 
 
 def _scores(prob: np.ndarray, target: np.ndarray, thr: float):
@@ -39,17 +39,28 @@ def _scores(prob: np.ndarray, target: np.ndarray, thr: float):
 
 
 @torch.no_grad()
-def _predict_tta(model, pre, post, crop, overlap) -> torch.Tensor:
-    """Average predictions over 8 D4 symmetries (4 rotations x {flip,no-flip})."""
+def _predict_tta(model, inputs, crop, overlap, kind: str) -> torch.Tensor:
+    """Average predictions over 8 D4 symmetries (4 rotations x {flip,no-flip}).
+
+    ``inputs`` is either ``(pre, post)`` for siamese or ``series`` for temporal.
+    """
     probs = []
     for k in range(4):
         for flip in (False, True):
-            p = torch.rot90(pre, k=k, dims=(1, 2))
-            q = torch.rot90(post, k=k, dims=(1, 2))
-            if flip:
-                p = torch.flip(p, dims=(2,))
-                q = torch.flip(q, dims=(2,))
-            out = predict_full(model, p, q, crop=crop, overlap=overlap)
+            if kind == "temporal":
+                series = inputs
+                s = torch.rot90(series, k=k, dims=(2, 3))
+                if flip:
+                    s = torch.flip(s, dims=(3,))
+                out = predict_full_temporal(model, s, crop=crop, overlap=overlap)
+            else:
+                pre, post = inputs
+                p = torch.rot90(pre, k=k, dims=(1, 2))
+                q = torch.rot90(post, k=k, dims=(1, 2))
+                if flip:
+                    p = torch.flip(p, dims=(2,))
+                    q = torch.flip(q, dims=(2,))
+                out = predict_full(model, p, q, crop=crop, overlap=overlap)
             if flip:
                 out = torch.flip(out, dims=(1,))
             out = torch.rot90(out, k=-k, dims=(0, 1))
@@ -66,21 +77,32 @@ def main(
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     sd = torch.load(ckpt, map_location=device, weights_only=False)
-    model = SiameseChangeUNet(in_channels=64, base=32).to(device)
+    kind = sd.get("model_kind", "siamese")
+    if kind == "temporal":
+        model = TemporalChangeUNet(in_channels=64, base=32).to(device)
+    else:
+        model = SiameseChangeUNet(in_channels=64, base=32).to(device)
     model.load_state_dict(sd["model"])
     model.eval()
-    print(f"loaded {ckpt} (epoch={sd.get('epoch')})")
+    print(f"loaded {ckpt}  kind={kind}  (epoch={sd.get('epoch')})")
 
     val = [t for t in train_tiles() if t.tile_id in DEFAULT_VAL_TILES]
-    ds = FullTileDataset(val)
+    ds = TemporalFullTileDataset(val) if kind == "temporal" else FullTileDataset(val)
 
     # Predict once per tile (plain + TTA), stash probs for sweep.
     tile_results: dict[str, dict] = {}
-    for tile_id, pre, post, hard in ds:
-        pre = pre.to(device)
-        post = post.to(device)
-        prob_plain = predict_full(model, pre, post, crop=crop, overlap=overlap).cpu().numpy()
-        prob_tta = _predict_tta(model, pre, post, crop=crop, overlap=overlap).cpu().numpy()
+    for item in ds:
+        if kind == "temporal":
+            tile_id, series, hard = item
+            series = series.to(device)
+            prob_plain = predict_full_temporal(model, series, crop=crop, overlap=overlap).cpu().numpy()
+            prob_tta = _predict_tta(model, series, crop=crop, overlap=overlap, kind=kind).cpu().numpy()
+        else:
+            tile_id, pre, post, hard = item
+            pre = pre.to(device)
+            post = post.to(device)
+            prob_plain = predict_full(model, pre, post, crop=crop, overlap=overlap).cpu().numpy()
+            prob_tta = _predict_tta(model, (pre, post), crop=crop, overlap=overlap, kind=kind).cpu().numpy()
         tile_results[tile_id] = {
             "prob_plain": prob_plain,
             "prob_tta": prob_tta,

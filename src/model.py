@@ -106,14 +106,91 @@ class SiameseChangeUNet(nn.Module):
         return self.head(d1)
 
 
+class TemporalChangeUNet(nn.Module):
+    """Temporal extension of SiameseChangeUNet.
+
+    Input is ``(B, T, C, H, W)`` where T is the number of AEF years (e.g. 6
+    for 2020..2025). A shared encoder runs independently on each year; at
+    each encoder scale we fuse the time axis via
+
+        [ f_{T-1},  max_{t>=1} |f_t - f_0|,  mean_{t>=1} |f_t - f_0| ]
+
+    - ``f_{T-1}``: features of the latest observation (semantic "what's there now").
+    - ``max |f_t - f_0|``: peak deviation from the pre-2020 reference — strong
+      signal for "an event happened at some point".
+    - ``mean |f_t - f_0|``: average deviation — helps distinguish transient
+      disturbances (single spike) from sustained change (consistent deviation).
+
+    The decoder is unchanged from SiameseChangeUNet.
+    """
+
+    def __init__(self, in_channels: int = 64, base: int = 32):
+        super().__init__()
+        c1, c2, c3, c4 = base, base * 2, base * 4, base * 8
+
+        self.enc1 = ConvBlock(in_channels, c1)
+        self.enc2 = Down(c1, c2)
+        self.enc3 = Down(c2, c3)
+        self.enc4 = Down(c3, c4)
+
+        # Fused channel count is 3 * c at each scale (last + max_diff + mean_diff).
+        self.up3 = Up(in_ch=3 * c4, skip_ch=3 * c3, out_ch=c3)
+        self.up2 = Up(in_ch=c3, skip_ch=3 * c2, out_ch=c2)
+        self.up1 = Up(in_ch=c2, skip_ch=3 * c1, out_ch=c1)
+        self.head = nn.Conv2d(c1, 1, 1)
+
+    def _encode(self, x):
+        e1 = self.enc1(x)
+        e2 = self.enc2(e1)
+        e3 = self.enc3(e2)
+        e4 = self.enc4(e3)
+        return e1, e2, e3, e4
+
+    @staticmethod
+    def _temporal_fuse(feats: torch.Tensor) -> torch.Tensor:
+        """feats: (B, T, C, H, W) -> (B, 3*C, H, W)."""
+        # diffs with respect to the first frame (t=0, pre-year)
+        f0 = feats[:, :1]                   # (B, 1, C, H, W)
+        diffs = (feats[:, 1:] - f0).abs()  # (B, T-1, C, H, W)
+        last = feats[:, -1]                # (B, C, H, W)
+        max_diff, _ = diffs.max(dim=1)     # (B, C, H, W)
+        mean_diff = diffs.mean(dim=1)      # (B, C, H, W)
+        return torch.cat([last, max_diff, mean_diff], dim=1)
+
+    def forward(self, series: torch.Tensor) -> torch.Tensor:
+        # series: (B, T, C, H, W) -> reshape to run encoder once on B*T
+        B, T, C, H, W = series.shape
+        x = series.reshape(B * T, C, H, W)
+        e1, e2, e3, e4 = self._encode(x)
+
+        def un(e):
+            return e.reshape(B, T, *e.shape[1:])
+
+        f1 = self._temporal_fuse(un(e1))
+        f2 = self._temporal_fuse(un(e2))
+        f3 = self._temporal_fuse(un(e3))
+        f4 = self._temporal_fuse(un(e4))
+
+        d3 = self.up3(f4, f3)
+        d2 = self.up2(d3, f2)
+        d1 = self.up1(d2, f1)
+        return self.head(d1)
+
+
 def count_params(m: nn.Module) -> int:
     return sum(p.numel() for p in m.parameters() if p.requires_grad)
 
 
 if __name__ == "__main__":
     m = SiameseChangeUNet()
-    print(f"params: {count_params(m):,}")
+    print(f"siamese params: {count_params(m):,}")
     pre = torch.randn(2, 64, 256, 256)
     post = torch.randn(2, 64, 256, 256)
     y = m(pre, post)
-    print("output:", y.shape)
+    print("siamese output:", y.shape)
+
+    t = TemporalChangeUNet()
+    print(f"temporal params: {count_params(t):,}")
+    series = torch.randn(2, 6, 64, 256, 256)
+    y = t(series)
+    print("temporal output:", y.shape)

@@ -8,10 +8,10 @@ import numpy as np
 import rasterio
 import torch
 
-from .dataset import FullTileDataset
+from .dataset import FullTileDataset, TemporalFullTileDataset
 from .inventory import test_tiles, train_tiles
-from .model import SiameseChangeUNet
-from .train import predict_full
+from .model import SiameseChangeUNet, TemporalChangeUNet
+from .train import predict_full, predict_full_temporal
 
 SUBMISSION_DIR = Path("submission")
 
@@ -39,21 +39,34 @@ def main(
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     sd = torch.load(ckpt, map_location=device, weights_only=False)
-    model = SiameseChangeUNet(in_channels=64, base=32).to(device)
+    kind = sd.get("model_kind", "siamese")
+    if kind == "temporal":
+        model = TemporalChangeUNet(in_channels=64, base=32).to(device)
+    else:
+        model = SiameseChangeUNet(in_channels=64, base=32).to(device)
     model.load_state_dict(sd["model"])
     model.eval()
-    print(f"loaded {ckpt}  (epoch={sd.get('epoch')}, metrics={sd.get('metrics', {}).get('macro_f1', 'n/a')})")
+    print(
+        f"loaded {ckpt}  kind={kind}  epoch={sd.get('epoch')}  "
+        f"metrics={sd.get('metrics', {}).get('macro_f1', 'n/a')}"
+    )
 
     tiles = test_tiles() if split == "test" else train_tiles()
-    ds = FullTileDataset(tiles)
+    ds = TemporalFullTileDataset(tiles) if kind == "temporal" else FullTileDataset(tiles)
     out_root = Path(out_dir)
 
     from submission_utils import raster_to_geojson
 
-    for tile_id, pre, post, _ in ds:
-        pre = pre.to(device)
-        post = post.to(device)
-        prob = predict_full(model, pre, post, crop=crop, overlap=overlap).cpu().numpy()
+    for item in ds:
+        if kind == "temporal":
+            tile_id, series, _ = item
+            series = series.to(device)
+            prob = predict_full_temporal(model, series, crop=crop, overlap=overlap).cpu().numpy()
+        else:
+            tile_id, pre, post, _ = item
+            pre = pre.to(device)
+            post = post.to(device)
+            prob = predict_full(model, pre, post, crop=crop, overlap=overlap).cpu().numpy()
         binary = (prob >= threshold).astype(np.uint8)
         print(f"{tile_id}: positives={binary.sum()} ({binary.mean()*100:.2f}%)")
 
