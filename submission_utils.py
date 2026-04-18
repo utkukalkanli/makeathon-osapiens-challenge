@@ -1,13 +1,18 @@
 """Utilities for converting deforestation prediction rasters into submittable GeoJSON."""
 
 import json
+import re
 from pathlib import Path
+from typing import Iterable
 
 import geopandas as gpd
 import numpy as np
 import rasterio
 from rasterio.features import shapes
 from shapely.geometry import shape
+
+VALID_GEOMETRY_TYPES = {"Polygon", "MultiPolygon"}
+YYMM_RE = re.compile(r"^\d{4}$")
 
 
 def raster_to_geojson(
@@ -104,3 +109,120 @@ def raster_to_geojson(
             json.dump(geojson, f)
 
     return geojson
+
+
+def _normalise_time_step(value):
+    """Return a validated YYMM time step, or ``None`` when omitted/null."""
+    if value is None:
+        return None
+
+    if isinstance(value, int):
+        text = f"{value:04d}"
+    elif isinstance(value, str):
+        text = value.strip()
+    else:
+        raise ValueError(
+            f"time_step must be a 4-digit YYMM string/int, null, or omitted; got {type(value).__name__}"
+        )
+
+    if not YYMM_RE.fullmatch(text):
+        raise ValueError(f"time_step must be in YYMM format, got {value!r}")
+
+    month = int(text[2:])
+    if not 1 <= month <= 12:
+        raise ValueError(f"time_step month must be between 01 and 12, got {value!r}")
+
+    return int(text)
+
+
+def _normalise_feature(feature: dict, source: str = "<memory>") -> dict:
+    """Strip a feature down to the fields accepted by the submission validator."""
+    if feature.get("type") != "Feature":
+        raise ValueError(f"{source}: every entry must be a GeoJSON Feature")
+
+    geometry = feature.get("geometry")
+    if not isinstance(geometry, dict):
+        raise ValueError(f"{source}: feature geometry must be an object")
+
+    geometry_type = geometry.get("type")
+    if geometry_type not in VALID_GEOMETRY_TYPES:
+        raise ValueError(
+            f"{source}: geometry type must be one of {sorted(VALID_GEOMETRY_TYPES)}, got {geometry_type!r}"
+        )
+
+    properties = feature.get("properties")
+    if properties is None:
+        properties = {}
+    if not isinstance(properties, dict):
+        raise ValueError(f"{source}: feature properties must be an object when present")
+
+    norm_properties = {}
+    if "time_step" in properties:
+        time_step = _normalise_time_step(properties.get("time_step"))
+        if time_step is not None:
+            norm_properties["time_step"] = time_step
+
+    return {"type": "Feature", "properties": norm_properties, "geometry": geometry}
+
+
+def validate_submission_geojson(geojson: dict, output_path: str | Path | None = None) -> dict:
+    """Validate a submission against the upload requirements.
+
+    Args:
+        geojson: Parsed GeoJSON object.
+        output_path: Optional destination path. When provided, the suffix must
+            be ``.geojson``.
+
+    Returns:
+        The input ``geojson`` when validation succeeds.
+
+    Raises:
+        ValueError: If the GeoJSON does not match the expected submission schema.
+    """
+    if output_path is not None and Path(output_path).suffix.lower() != ".geojson":
+        raise ValueError(f"Submission file must use the .geojson extension: {output_path}")
+
+    if not isinstance(geojson, dict):
+        raise ValueError("GeoJSON must parse to an object")
+
+    if geojson.get("type") != "FeatureCollection":
+        raise ValueError("GeoJSON top-level type must be FeatureCollection")
+
+    features = geojson.get("features")
+    if not isinstance(features, list):
+        raise ValueError("FeatureCollection must contain a features array")
+
+    for idx, feature in enumerate(features):
+        _normalise_feature(feature, source=f"feature[{idx}]")
+
+    return geojson
+
+
+def merge_geojson_featurecollections(
+    geojson_paths: Iterable[str | Path],
+    output_path: str | Path | None = None,
+) -> dict:
+    """Merge per-tile GeoJSON FeatureCollections into one uploadable file.
+
+    The merged output keeps only the fields accepted by the submission format:
+    ``geometry`` and the optional ``properties.time_step``.
+    """
+    features = []
+    for path_like in geojson_paths:
+        path = Path(path_like)
+        with open(path) as f:
+            payload = json.load(f)
+        validate_submission_geojson(payload, output_path=path)
+        for feature in payload["features"]:
+            features.append(_normalise_feature(feature, source=str(path)))
+
+    merged = {"type": "FeatureCollection", "features": features}
+    validate_submission_geojson(merged, output_path=output_path)
+
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w") as f:
+            json.dump(merged, f)
+
+    return merged

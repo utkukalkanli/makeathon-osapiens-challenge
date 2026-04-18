@@ -36,6 +36,7 @@ def main(
     overlap: int = 128,
     split: str = "test",
     out_dir: str = "submission",
+    merged_output: str | None = None,
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     sd = torch.load(ckpt, map_location=device, weights_only=False)
@@ -56,7 +57,9 @@ def main(
     ds = TemporalFullTileDataset(tiles) if kind == "temporal" else FullTileDataset(tiles)
     out_root = Path(out_dir)
 
-    from submission_utils import raster_to_geojson
+    from submission_utils import merge_geojson_featurecollections, raster_to_geojson
+
+    geojson_paths: list[Path] = []
 
     for item in ds:
         if kind == "temporal":
@@ -83,9 +86,16 @@ def main(
         geo_p = out_root / f"{tile_id}.geojson"
         try:
             raster_to_geojson(tif_p, output_path=geo_p, min_area_ha=0.5)
+            geojson_paths.append(geo_p)
             print(f"  wrote {geo_p}")
         except ValueError as e:
             print(f"  skip {tile_id}: {e}")
+
+    if merged_output is not None:
+        merged_p = Path(merged_output)
+        merged = merge_geojson_featurecollections(geojson_paths, output_path=merged_p)
+        print(f"merged {len(geojson_paths)} tile files into {merged_p}")
+        print(f"total submission features={len(merged['features'])}")
 
 
 if __name__ == "__main__":
@@ -96,5 +106,10 @@ if __name__ == "__main__":
     ap.add_argument("--overlap", type=int, default=128)
     ap.add_argument("--split", default="test", choices=["test", "train"])
     ap.add_argument("--out_dir", default="submission")
+    ap.add_argument(
+        "--merged_output",
+        default=None,
+        help="Optional final upload file that merges all per-tile GeoJSONs into one FeatureCollection.",
+    )
     args = ap.parse_args()
     main(**vars(args))

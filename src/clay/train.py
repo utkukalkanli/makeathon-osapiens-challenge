@@ -108,6 +108,7 @@ def main(
     seed: int = 0,
     out_name: str = "clay_frozen_v1",
     freeze_encoder: bool = True,
+    encoder_lr: float | None = None,  # only used when freeze_encoder=False
     pretrained_ckpt: str | None = None,  # resolved to HF download if None
     pseudo_dir: str | None = None,
     pseudo_crops_per_tile: int = 16,
@@ -163,10 +164,24 @@ def main(
     print(f"params: total={total/1e6:.1f}M  trainable={trainable/1e6:.1f}M  "
           f"freeze_encoder={freeze_encoder}")
 
-    opt = torch.optim.AdamW(
-        [p for p in model.parameters() if p.requires_grad],
-        lr=lr, weight_decay=1e-4,
-    )
+    if freeze_encoder:
+        opt = torch.optim.AdamW(
+            [p for p in model.parameters() if p.requires_grad],
+            lr=lr, weight_decay=1e-4,
+        )
+        enc_lr_eff = 0.0
+    else:
+        enc_lr_eff = encoder_lr if encoder_lr is not None else lr * 0.01
+        enc_params = [p for p in model.encoder.parameters() if p.requires_grad]
+        head_params = [p for p in model.head.parameters() if p.requires_grad]
+        opt = torch.optim.AdamW(
+            [
+                {"params": enc_params, "lr": enc_lr_eff},
+                {"params": head_params, "lr": lr},
+            ],
+            weight_decay=1e-4,
+        )
+        print(f"  encoder_lr={enc_lr_eff:.2e}  head_lr={lr:.2e}")
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
     loss_fn = BCETverskyLoss(bce_weight=1.0, tversky_weight=1.0,
                              alpha=0.3, beta=0.7, pos_weight=3.0)
@@ -185,6 +200,7 @@ def main(
         "seed": seed,
         "val_tiles": ",".join(val_tile_ids),
         "freeze_encoder": freeze_encoder,
+        "encoder_lr": enc_lr_eff,
         "pretrained_ckpt": Path(pretrained_ckpt).name,
         "params_total": total,
         "params_trainable": trainable,
@@ -273,6 +289,8 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out_name", default="clay_frozen_v1")
     ap.add_argument("--freeze_encoder", action=argparse.BooleanOptionalAction, default=True)
+    ap.add_argument("--encoder_lr", type=float, default=None,
+                    help="LR for encoder params when freeze_encoder=False. Default: lr*0.01.")
     ap.add_argument("--pretrained_ckpt", default=None)
     ap.add_argument("--pseudo_dir", default=None)
     ap.add_argument("--pseudo_crops_per_tile", type=int, default=16)
