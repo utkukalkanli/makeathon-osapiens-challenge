@@ -78,10 +78,11 @@ def main(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     sd = torch.load(ckpt, map_location=device, weights_only=False)
     kind = sd.get("model_kind", "siamese")
+    in_ch = sd.get("in_channels", 64)
     if kind == "temporal":
-        model = TemporalChangeUNet(in_channels=64, base=32).to(device)
+        model = TemporalChangeUNet(in_channels=in_ch, base=32).to(device)
     else:
-        model = SiameseChangeUNet(in_channels=64, base=32).to(device)
+        model = SiameseChangeUNet(in_channels=in_ch, base=32).to(device)
     model.load_state_dict(sd["model"])
     model.eval()
     print(f"loaded {ckpt}  kind={kind}  (epoch={sd.get('epoch')})")

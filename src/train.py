@@ -144,14 +144,17 @@ def main(
             positive_crop_prob=0.75, augment=True,
         )
         val_ds = TemporalFullTileDataset(va)
-        model = TemporalChangeUNet(in_channels=64, base=32).to(device)
+        in_channels = train_ds[0][0].shape[1]  # (T, C, H, W)
+        model = TemporalChangeUNet(in_channels=in_channels, base=32).to(device)
     else:
         train_ds = AEFCropDataset(
             tr, crop_size=crop_size, crops_per_tile=crops_per_tile,
             positive_crop_prob=0.75, augment=True,
         )
         val_ds = FullTileDataset(va)
-        model = SiameseChangeUNet(in_channels=64, base=32).to(device)
+        in_channels = train_ds[0][0].shape[0]  # (C, H, W)
+        model = SiameseChangeUNet(in_channels=in_channels, base=32).to(device)
+    print(f"in_channels: {in_channels}")
 
     loader = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True,
@@ -210,6 +213,7 @@ def main(
                 "metrics": metrics,
                 "val_tiles": list(val_tile_ids),
                 "model_kind": model_kind,
+                "in_channels": in_channels,
             }, CKPT_DIR / f"{out_name}_best.pt")
             print(f"  ↳ saved new best (f1={best_f1:.3f})")
 

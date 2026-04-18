@@ -50,13 +50,14 @@ def _scores(prob: np.ndarray, target: np.ndarray, thr: float):
 def _load(ckpt: str, device: str):
     sd = torch.load(ckpt, map_location=device, weights_only=False)
     kind = sd.get("model_kind", "siamese")
+    in_ch = sd.get("in_channels", 64)
     if kind == "temporal":
-        model = TemporalChangeUNet(in_channels=64, base=32).to(device)
+        model = TemporalChangeUNet(in_channels=in_ch, base=32).to(device)
     else:
-        model = SiameseChangeUNet(in_channels=64, base=32).to(device)
+        model = SiameseChangeUNet(in_channels=in_ch, base=32).to(device)
     model.load_state_dict(sd["model"])
     model.eval()
-    print(f"  loaded {ckpt}  kind={kind}  epoch={sd.get('epoch')}")
+    print(f"  loaded {ckpt}  kind={kind}  in_ch={in_ch}  epoch={sd.get('epoch')}")
     return model, kind
 
 

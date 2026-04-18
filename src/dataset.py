@@ -14,8 +14,11 @@ from torch.utils.data import Dataset
 
 from .inventory import Tile, train_tiles
 from .labels import fused_labels, load_reference_grid
+from .s2_features import s2_annual_features
 
 CACHE_DIR = Path("cache")
+# Bump when the cache schema changes so stale .npz files are rebuilt.
+CACHE_VERSION = 2  # v2 = added per-year S2 NDVI/NBR features
 
 
 def _read_aef(path: Path) -> np.ndarray:
@@ -49,35 +52,37 @@ def build_tile_tensors(
     """Load and align everything for one tile. Cached as .npz on disk.
 
     Keys written:
-      - pre   : (64, H, W) AEF for pre_year
-      - post  : (64, H, W) AEF for post_year
-      - series: (T, 64, H, W) AEF stack across all tile.years (temporal input)
+      - pre   : (66, H, W) AEF+S2 for pre_year  (64 AEF + 2 S2 NDVI/NBR)
+      - post  : (66, H, W) AEF+S2 for post_year
+      - series: (T, 66, H, W) AEF+S2 stack across all tile.years
       - hard  : (H, W) majority-vote binary label  (train only)
       - soft  : (H, W) agreement-rate soft label   (train only)
+      - version: scalar, cache schema version
     """
     cache_p = CACHE_DIR / tile.split / f"{tile.tile_id}.npz"
     if cache and cache_p.exists():
         with np.load(cache_p) as f:
             keys = set(f.files)
-            # Rebuild if cache was written by an older version without "series".
-            if "series" in keys:
-                return {k: f[k] for k in f.files}
+            version = int(f["version"]) if "version" in keys else 0
+            if version >= CACHE_VERSION and {"pre", "post", "series"} <= keys:
+                return {k: f[k] for k in f.files if k != "version"}
 
     # Reference grid = AEF pre-year tile.
     ref_path = tile.aef_path(pre_year)
     ref_shape, ref_transform, ref_crs = load_reference_grid(ref_path)
 
-    pre = _read_aef(ref_path)  # (64, H, W)
-    post = _read_aef(tile.aef_path(post_year))
-    post = _pad_or_crop_like(post, ref_shape)  # tiny size differences happen
+    def _aef_plus_s2(year: int) -> np.ndarray:
+        aef = _read_aef(tile.aef_path(year))         # (64, H, W)
+        aef = _pad_or_crop_like(aef, ref_shape)
+        s2 = s2_annual_features(tile, year)          # (2, H, W)
+        s2 = _pad_or_crop_like(s2, ref_shape)
+        return np.concatenate([aef, s2], axis=0).astype(np.float32)  # (66, H, W)
+
+    pre = _aef_plus_s2(pre_year)
+    post = _aef_plus_s2(post_year)
 
     # Full temporal series across all years available for this tile.
-    series_frames = []
-    for y in tile.years:
-        arr = _read_aef(tile.aef_path(y))
-        arr = _pad_or_crop_like(arr, ref_shape)
-        series_frames.append(arr)
-    series = np.stack(series_frames, axis=0)  # (T, 64, H, W)
+    series = np.stack([_aef_plus_s2(y) for y in tile.years], axis=0)  # (T, 66, H, W)
 
     out: dict[str, np.ndarray] = {"pre": pre, "post": post, "series": series}
 
@@ -88,7 +93,7 @@ def build_tile_tensors(
 
     if cache:
         cache_p.parent.mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(cache_p, **out)
+        np.savez_compressed(cache_p, version=np.int32(CACHE_VERSION), **out)
     return out
 
 
