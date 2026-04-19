@@ -1,0 +1,1195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deforestation Pipeline Overview</title>
+  <style>
+    :root {
+      --bg: #f7f3eb;
+      --bg-accent: #efe4cf;
+      --paper: rgba(255, 252, 245, 0.9);
+      --ink: #172126;
+      --muted: #5f6b72;
+      --line: rgba(23, 33, 38, 0.12);
+      --primary: #0f766e;
+      --secondary: #c2410c;
+      --tertiary: #4f46e5;
+      --success: #1f7a1f;
+      --warning: #a16207;
+      --shadow: 0 24px 70px rgba(23, 33, 38, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(194, 65, 12, 0.10), transparent 34%),
+        linear-gradient(135deg, var(--bg) 0%, #f4ecdf 50%, var(--bg-accent) 100%);
+      color: var(--ink);
+      font-family: "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .eyebrow {
+      font-size: 0.82rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .deck-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .deck-subtitle {
+      font-size: 0.92rem;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .counter {
+      font-size: 0.92rem;
+      color: var(--muted);
+      font-weight: 700;
+      min-width: 76px;
+      text-align: right;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: var(--ink);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 12px 28px rgba(23, 33, 38, 0.14);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 32px rgba(23, 33, 38, 0.18);
+    }
+
+    button:disabled {
+      opacity: 0.35;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .progress {
+      width: 100%;
+      height: 8px;
+      background: rgba(23, 33, 38, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress > div {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width 0.22s ease;
+    }
+
+    .viewport {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      min-height: 0;
+    }
+
+    .slide {
+      display: none;
+      width: min(1180px, 100%);
+      min-height: min(78vh, 760px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 30px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 249, 240, 0.92)),
+        white;
+      box-shadow: var(--shadow);
+      padding: 34px 38px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent 22%),
+        radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.08), transparent 28%);
+      pointer-events: none;
+    }
+
+    .slide.active {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      animation: fadeUp 0.3s ease;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .slide-head {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .slide-number {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .slide h1,
+    .slide h2 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.03;
+      letter-spacing: -0.03em;
+    }
+
+    .slide h1 {
+      font-size: clamp(2.4rem, 5vw, 4.8rem);
+      max-width: 12ch;
+    }
+
+    .slide h2 {
+      font-size: clamp(1.95rem, 4vw, 3.1rem);
+      max-width: 13ch;
+    }
+
+    .lede {
+      margin-top: 10px;
+      max-width: 72ch;
+      font-size: 1.02rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.12);
+      color: var(--primary);
+      padding: 8px 12px;
+      font-size: 0.84rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .tag.secondary {
+      background: rgba(194, 65, 12, 0.12);
+      color: var(--secondary);
+    }
+
+    .tag.tertiary {
+      background: rgba(79, 70, 229, 0.12);
+      color: var(--tertiary);
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .card,
+    .panel,
+    .timeline-step,
+    .flow-step {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      backdrop-filter: blur(12px);
+    }
+
+    .card h3,
+    .panel h3,
+    .timeline-step h3,
+    .flow-step h3 {
+      margin: 0 0 10px;
+      font-size: 1.08rem;
+      letter-spacing: -0.02em;
+    }
+
+    .card p,
+    .panel p,
+    .timeline-step p,
+    .flow-step p,
+    li,
+    .small {
+      color: var(--muted);
+      line-height: 1.48;
+      margin: 0;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .big-stat {
+      font-size: clamp(2.1rem, 4vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      margin-bottom: 8px;
+    }
+
+    .big-stat.primary {
+      color: var(--primary);
+    }
+
+    .big-stat.secondary {
+      color: var(--secondary);
+    }
+
+    .big-stat.tertiary {
+      color: var(--tertiary);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+
+    .flow-step {
+      position: relative;
+      min-height: 158px;
+    }
+
+    .flow-step::after {
+      content: "→";
+      position: absolute;
+      right: -12px;
+      top: 18px;
+      color: rgba(23, 33, 38, 0.26);
+      font-size: 1.8rem;
+      font-weight: 900;
+    }
+
+    .flow-step:last-child::after {
+      display: none;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .timeline-step {
+      min-height: 182px;
+    }
+
+    .timeline-step .kicker {
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--primary);
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .code {
+      display: inline-block;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.85rem;
+      background: rgba(23, 33, 38, 0.07);
+      border: 1px solid rgba(23, 33, 38, 0.08);
+      border-radius: 10px;
+      padding: 4px 8px;
+      color: var(--ink);
+      margin: 3px 6px 3px 0;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .footer {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .dot.primary {
+      background: var(--primary);
+    }
+
+    .dot.secondary {
+      background: var(--secondary);
+    }
+
+    .dot.tertiary {
+      background: var(--tertiary);
+    }
+
+    .accent-bar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .accent-bar > div {
+      height: 8px;
+      border-radius: 999px;
+    }
+
+    .accent-bar > div:nth-child(1) {
+      background: linear-gradient(90deg, rgba(15, 118, 110, 0.18), var(--primary));
+    }
+
+    .accent-bar > div:nth-child(2) {
+      background: linear-gradient(90deg, rgba(194, 65, 12, 0.18), var(--secondary));
+    }
+
+    .accent-bar > div:nth-child(3) {
+      background: linear-gradient(90deg, rgba(79, 70, 229, 0.18), var(--tertiary));
+    }
+
+    .title-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .title-callout {
+      background:
+        linear-gradient(160deg, rgba(15, 118, 110, 0.12), rgba(79, 70, 229, 0.10)),
+        var(--paper);
+      border: 1px solid rgba(15, 118, 110, 0.16);
+      border-radius: 24px;
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .title-callout strong {
+      font-size: 1rem;
+    }
+
+    @media (max-width: 980px) {
+      body {
+        padding: 14px;
+      }
+
+      .slide {
+        padding: 24px 22px;
+        min-height: 0;
+      }
+
+      .grid-2,
+      .grid-3,
+      .grid-4,
+      .flow,
+      .timeline,
+      .split,
+      .title-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-step::after {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="eyebrow">Makeathon 2026</div>
+      <p class="deck-title">Deforestation Detection Pipeline</p>
+      <p class="deck-subtitle">5-minute English walkthrough of the repo, model families, the Clay branch, and the pseudo-label retraining loop</p>
+    </div>
+    <div class="controls">
+      <button id="prevBtn" type="button">Back</button>
+      <button id="nextBtn" type="button">Next</button>
+      <div class="counter" id="counter">1 / 12</div>
+    </div>
+  </div>
+
+  <div class="progress" aria-hidden="true">
+    <div id="progressBar"></div>
+  </div>
+
+  <main class="viewport">
+    <section class="slide active" data-title="Cover">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 01</div>
+          <h1>Deforestation Pipeline in 5 Minutes</h1>
+          <p class="lede">
+            This deck is the presentation version of the repo: data sources, AEF-grid feature engineering,
+            siamese and temporal models, the Clay branch, pseudo-labeling, and pseudo-assisted retraining.
+          </p>
+        </div>
+        <div class="tag tertiary">Single-file HTML slide deck</div>
+      </div>
+
+      <div class="content title-layout">
+        <div class="panel">
+          <div class="accent-bar">
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+          <div style="margin-top: 16px;" class="grid-3">
+            <div class="card">
+              <div class="big-stat primary">S2</div>
+              <p>Optical time series, NDVI and NBR features, and monthly NDVI-drop based time-step estimation.</p>
+            </div>
+            <div class="card">
+              <div class="big-stat secondary">S1</div>
+              <p>Cloud-robust radar signal with annual VV ascending and descending composites.</p>
+            </div>
+            <div class="card">
+              <div class="big-stat tertiary">AEF</div>
+              <p>64-channel AlphaEarth Foundations embedding; the reference grid for the full pipeline.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="title-callout">
+          <div class="tag">Current phase</div>
+          <strong>We are currently generating pseudo labels; after that, the same pipeline is trained again with pseudo-labeled data.</strong>
+          <p class="small">
+            Example artifact:
+            <span class="code">submission/temporal_s2s1_norm_v1_thr015_submission.geojson</span>
+          </p>
+          <p class="small">
+            Goal:
+            train with weak supervision, generate pseudo labels from teacher models, then retrain a stronger student model with those pseudo labels.
+          </p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>Keyboard: Left/Right arrows, Home, End</span>
+        <div class="legend">
+          <span><i class="dot primary"></i> Main U-Net path</span>
+          <span><i class="dot secondary"></i> Pseudo-label loop</span>
+          <span><i class="dot tertiary"></i> Clay branch</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Problem">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 02</div>
+          <h2>Problem and Expected Output</h2>
+          <p class="lede">
+            The task is to detect post-2020 deforestation from satellite data. The final output is not only a pixel mask,
+            but a polygon-based GeoJSON submission.
+          </p>
+        </div>
+        <div class="tag secondary">Weak supervision + multimodal fusion</div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Main goal</h3>
+          <ul>
+            <li>Find deforestation signals from 2021 onward</li>
+            <li>Fuse heterogeneous and noisy data sources in one common space</li>
+            <li>Deliver the result as polygon-based GeoJSON</li>
+            <li>If possible, estimate a <span class="code">time_step</span> for each polygon</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Why it is hard</h3>
+          <ul>
+            <li>S2 is affected by clouds, while S1 is coarser but cloud-robust</li>
+            <li>The labels are weak alert sources, not clean ground truth</li>
+            <li>The number of train tiles is small</li>
+            <li>Representation learning and pseudo-labeling therefore matter a lot</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>The repo converts final prediction rasters into GeoJSON polygons.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Data Sources">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 03</div>
+          <h2>Data Sources</h2>
+          <p class="lede">
+            The pipeline combines four ingredients: Sentinel-2, Sentinel-1, AlphaEarth Foundations embeddings, and weak alert labels.
+          </p>
+        </div>
+        <div class="tag">S2 + S1 + AEF + GLAD/RADD</div>
+      </div>
+
+      <div class="content grid-4">
+        <div class="card">
+          <h3>Sentinel-2</h3>
+          <p>Monthly optical imagery. In this repo, annual median composites are turned into NDVI and NBR features.</p>
+        </div>
+        <div class="card">
+          <h3>Sentinel-1</h3>
+          <p>Monthly radar imagery. Annual median VV ascending and VV descending in dB are used as features.</p>
+        </div>
+        <div class="card">
+          <h3>AEF</h3>
+          <p>64-channel embedding. It provides a learned representation instead of raw pixels.</p>
+        </div>
+        <div class="card">
+          <h3>Weak labels</h3>
+          <p><span class="code">GLAD-S2</span>, <span class="code">GLAD-L</span>, and <span class="code">RADD</span> are fused by majority vote.</p>
+        </div>
+      </div>
+
+      <div class="content panel">
+        <h3>Repository layout</h3>
+        <p class="small">
+          <span class="code">data/makeathon-challenge/sentinel-2/</span>
+          <span class="code">data/makeathon-challenge/sentinel-1/</span>
+          <span class="code">data/makeathon-challenge/aef-embeddings/</span>
+          <span class="code">data/makeathon-challenge/labels/train/</span>
+        </p>
+      </div>
+
+      <div class="footer">
+        <span>Key point: every modality is reprojected onto the AEF grid.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Feature Pipeline">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 04</div>
+          <h2>Feature Engineering on the AEF Grid</h2>
+          <p class="lede">
+            The pipeline first brings every modality onto the AEF reference grid, then builds a fixed-channel tensor.
+          </p>
+        </div>
+        <div class="tag tertiary">Reference grid: AEF EPSG:4326</div>
+      </div>
+
+      <div class="content flow">
+        <div class="flow-step">
+          <h3>1. Reference</h3>
+          <p>Each tile starts from the AEF grid.</p>
+          <p class="small">Labels and features are aligned to this shared space.</p>
+        </div>
+        <div class="flow-step">
+          <h3>2. S2 features</h3>
+          <p>Monthly L2A files are cloud-masked and aggregated into annual median NDVI and NBR.</p>
+        </div>
+        <div class="flow-step">
+          <h3>3. S1 features</h3>
+          <p>Annual median VV ascending and VV descending in dB are computed.</p>
+        </div>
+        <div class="flow-step">
+          <h3>4. Stack</h3>
+          <p><span class="code">64 AEF + 2 S2 + 2 S1 = 68 channels</span></p>
+          <p class="small">Then normalization and validity masks expand it to 71 channels.</p>
+        </div>
+      </div>
+
+      <div class="content grid-3">
+        <div class="panel">
+          <h3>Raw stack</h3>
+          <div class="big-stat primary">68</div>
+          <p>64 AEF embedding + 2 NDVI/NBR + 2 VV dB</p>
+        </div>
+        <div class="panel">
+          <h3>Add masks</h3>
+          <div class="big-stat secondary">+3</div>
+          <p>S2 valid, S1 ascending valid, S1 descending valid</p>
+        </div>
+        <div class="panel">
+          <h3>Final input</h3>
+          <div class="big-stat tertiary">71</div>
+          <p>Z-score normalization + mask-aware neutral zero handling</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>That is why <span class="code">temporal_s2s1_norm_v1_best.pt</span> uses <span class="code">in_channels = 71</span>.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Model Families">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 05</div>
+          <h2>Siamese and Temporal U-Net Paths</h2>
+          <p class="lede">
+            The main model family is a change-detection U-Net. The key difference is whether it uses a pre/post pair or the full multi-year series.
+          </p>
+        </div>
+        <div class="tag">src/unet/</div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Siamese model</h3>
+          <ul>
+            <li>Uses the pair <span class="code">pre = 2020</span> and <span class="code">post = 2025</span></li>
+            <li>The same encoder is applied independently to both images</li>
+            <li>Fuse rule: <span class="code">[post, |post - pre|]</span></li>
+            <li>Examples: <span class="code">siamese_unet_v1</span>, <span class="code">siamese_s2_v1</span></li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Temporal model</h3>
+          <ul>
+            <li>Uses the full series <span class="code">2020..2025</span></li>
+            <li>Temporal fusion is <span class="code">last + max diff + mean diff</span></li>
+            <li>Helps separate persistent change from temporary disturbances</li>
+            <li>Examples: <span class="code">temporal_v1</span>, <span class="code">temporal_s2_v1</span>, <span class="code">temporal_s2s1_norm_v1</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="content panel">
+        <h3>Quick way to read experiment names</h3>
+        <p class="small">
+          <span class="code">temporal</span> = full multi-year series
+          <span class="code">siamese</span> = pre/post pair
+          <span class="code">s2</span> = AEF + S2
+          <span class="code">s2s1</span> = AEF + S2 + S1
+          <span class="code">norm</span> = z-score + valid masks
+        </p>
+      </div>
+
+      <div class="footer">
+        <span>The repo uses full-tile sliding-window prediction for both training-time validation and inference.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Train Loop">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 06</div>
+          <h2>Training Loop and Label Construction</h2>
+          <p class="lede">
+            Labels come from weak-source fusion, while the training loop is strengthened with crop sampling, augmentation, and modality dropout.
+          </p>
+        </div>
+        <div class="tag secondary">src/labels.py + src/unet/train.py</div>
+      </div>
+
+      <div class="content split">
+        <div class="panel">
+          <h3>Label side</h3>
+          <ul>
+            <li><span class="code">GLAD-S2</span>, <span class="code">GLAD-L</span>, and <span class="code">RADD</span> are reprojected onto the same grid</li>
+            <li><span class="code">hard label</span>: positive if at least 2 of the 3 sources vote positive</li>
+            <li><span class="code">soft label</span>: agreement score, namely 0 / 1/3 / 2/3 / 1</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Training side</h3>
+          <ul>
+            <li>Positive crop sampling reduces class imbalance</li>
+            <li>Rotation and flip augmentation are used</li>
+            <li>Modality dropout simulates missing S2 or S1 input</li>
+            <li>Loss: masked <span class="code">BCE + Tversky</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="content grid-3">
+        <div class="card">
+          <h3>Validation</h3>
+          <p>Macro F1 and IoU are measured on fixed validation tiles using full-tile inference.</p>
+        </div>
+        <div class="card">
+          <h3>Checkpoint</h3>
+          <p>The best macro F1 epoch is saved as <span class="code">checkpoints/*_best.pt</span>.</p>
+        </div>
+        <div class="card">
+          <h3>History</h3>
+          <p>Epoch-level train loss and validation metrics are stored in <span class="code">*_history.json</span>.</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>Example: <span class="code">checkpoints/temporal_s2s1_norm_v1_history.json</span></span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Pseudo Loop">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 07</div>
+          <h2>Pseudo-Labeling and Retraining Loop</h2>
+          <p class="lede">
+            This is the current active phase: teacher models predict on test tiles, reliable pixels become pseudo labels,
+            and then the model is trained again with pseudo-labeled data.
+          </p>
+        </div>
+        <div class="tag secondary">src/pseudo_labels_v2.py</div>
+      </div>
+
+      <div class="content timeline">
+        <div class="timeline-step">
+          <div class="kicker">Step 1</div>
+          <h3>Teacher inference</h3>
+          <p><span class="code">temporal_s2_pseudo_v1</span> and <span class="code">temporal_s2s1_norm_v1</span> write cached probability maps on test tiles.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Step 2</div>
+          <h3>Agreement filtering</h3>
+          <p>If both teachers are confident, the pixel becomes <span class="code">pos</span> or <span class="code">neg</span>; otherwise it becomes <span class="code">ignore</span>.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Step 3</div>
+          <h3>Pseudo files</h3>
+          <p>Each tile stores <span class="code">hard</span>, <span class="code">weight</span>, and <span class="code">prob</span>.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Step 4</div>
+          <h3>Masked training</h3>
+          <p>Pixels with <span class="code">weight = 0</span> are ignored by the loss.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Step 5</div>
+          <h3>Retrain</h3>
+          <p>Real train crops and pseudo crops are mixed together. The new checkpoint family becomes <span class="code">*_pseudo_v1</span>.</p>
+        </div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Why it helps</h3>
+          <ul>
+            <li>It makes training data look more like the test distribution</li>
+            <li>It transfers the shared confidence of the teacher models</li>
+            <li>It reduces punishment where S1 helps but weak labels are incomplete</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Repository artifacts</h3>
+          <p class="small">
+            <span class="code">pseudo_v2/*.npz</span>
+            <span class="code">checkpoints/temporal_s2s1_norm_pseudo_v1_best.pt</span>
+            <span class="code">submission/temporal_s2s1_pseudo_v1_*</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>Presentation line: "We generate pseudo labels with a teacher ensemble and retrain the student with pseudo-labeled data."</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Clay Branch">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 08</div>
+          <h2>Clay Branch: Pretrained Encoder Path</h2>
+          <p class="lede">
+            The second model family in the repo is a siamese segmentation branch built on top of the Clay v1.5 encoder.
+            This path uses more raw spectral input than the AEF embedding path.
+          </p>
+        </div>
+        <div class="tag tertiary">src/clay/</div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Clay data loader</h3>
+          <ul>
+            <li>Builds <span class="code">12-band S2 + 1-band S1 VV</span> on the same AEF grid</li>
+            <li>Uses a two-timestep <span class="code">pre</span> / <span class="code">post</span> layout</li>
+            <li>Generates <span class="code">lat/lon</span> metadata from the tile centroid</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Clay model</h3>
+          <ul>
+            <li>The pretrained Clay encoder is frozen by default</li>
+            <li>The same siamese fusion idea is used: <span class="code">[post, |post - pre|]</span></li>
+            <li>Note: the loader contains S1, but the encoder path is mainly S2, while radar is used more strongly in the main U-Net pipeline</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="content grid-3">
+        <div class="card">
+          <h3>Frozen phase</h3>
+          <p><span class="code">checkpoints/clay_frozen_v1_best.pt</span></p>
+        </div>
+        <div class="card">
+          <h3>Fine-tune phase</h3>
+          <p><span class="code">checkpoints/clay_ft_v1_best.pt</span></p>
+        </div>
+        <div class="card">
+          <h3>Pseudo support</h3>
+          <p>The Clay branch can also retrain with pseudo crop datasets.</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>Message: the Clay branch is the pretrained spectral-encoder experiment that sits next to the main U-Net path.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Experiment Story">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 09</div>
+          <h2>The Experiment Story in the Repo</h2>
+          <p class="lede">
+            The checkpoint names also describe the technical progression: more modalities, better normalization, and then a second training round with pseudo labels.
+          </p>
+        </div>
+        <div class="tag">checkpoints/ + submission/</div>
+      </div>
+
+      <div class="content timeline">
+        <div class="timeline-step">
+          <div class="kicker">Baseline</div>
+          <h3>AEF only</h3>
+          <p><span class="code">siamese_unet_v1</span><br><span class="code">temporal_v1</span></p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Feature add</div>
+          <h3>AEF + S2</h3>
+          <p><span class="code">siamese_s2_v1</span><br><span class="code">temporal_s2_v1</span></p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Richer input</div>
+          <h3>AEF + S2 + S1 + norm</h3>
+          <p><span class="code">temporal_s2s1_norm_v1</span></p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Pseudo loop</div>
+          <h3>Pseudo-label retrain</h3>
+          <p><span class="code">temporal_s2s1_norm_pseudo_v1</span><br><span class="code">temporal_s2s1_pseudo_v1</span></p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Alternative branch</div>
+          <h3>Clay</h3>
+          <p><span class="code">clay_frozen_v1</span><br><span class="code">clay_ft_v1</span></p>
+        </div>
+      </div>
+
+      <div class="content panel">
+        <h3>Example open file</h3>
+        <p class="small">
+          <span class="code">submission/temporal_s2s1_norm_v1_thr015_submission.geojson</span>
+          =
+          <span class="code">temporal</span> +
+          <span class="code">s2s1</span> +
+          <span class="code">norm</span> +
+          <span class="code">threshold 0.15</span> +
+          merged final GeoJSON
+        </p>
+      </div>
+
+      <div class="footer">
+        <span>This slide works well when you want to decode experiment names quickly for the audience.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Submission Pipeline">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 10</div>
+          <h2>Submission Generation and Time-Step Estimation</h2>
+          <p class="lede">
+            At the end, the trained model produces probability rasters; then thresholding, polygonization, and time-step estimation produce the final GeoJSON.
+          </p>
+        </div>
+        <div class="tag secondary">src/submit_v2.py</div>
+      </div>
+
+      <div class="content flow">
+        <div class="flow-step">
+          <h3>1. Inference</h3>
+          <p>A test tile is processed with TTA, and the probability map is cached.</p>
+        </div>
+        <div class="flow-step">
+          <h3>2. Threshold</h3>
+          <p>Multiple thresholds are tried, such as <span class="code">thr015</span> and <span class="code">thr020</span>.</p>
+        </div>
+        <div class="flow-step">
+          <h3>3. Polygonize</h3>
+          <p>The binary raster is converted into polygons, and very small areas are removed.</p>
+        </div>
+        <div class="flow-step">
+          <h3>4. Time step</h3>
+          <p>A likely <span class="code">YYMM</span> event time can be assigned from the monthly NDVI drop.</p>
+        </div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Cache logic</h3>
+          <p class="small">
+            Folders such as <span class="code">submission/temporal_s2s1_norm_v1_cache/probs</span>
+            let us sweep thresholds without rerunning inference.
+          </p>
+        </div>
+        <div class="panel">
+          <h3>Presentation line</h3>
+          <p class="small">
+            "We convert the prediction raster into polygons, then estimate the most likely event month from the S2 NDVI time series."
+          </p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>This section shows that the project is not only about segmentation, but also about delivery and submission packaging.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Directory Map">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 11</div>
+          <h2>Repository Map</h2>
+          <p class="lede">
+            A quick map for Q&amp;A, so you can answer what each folder does without going back to the code.
+          </p>
+        </div>
+        <div class="tag tertiary">Useful as speaker notes</div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Main folders</h3>
+          <ul>
+            <li><span class="code">src/unet/</span>: siamese and temporal U-Net models</li>
+            <li><span class="code">src/clay/</span>: Clay encoder branch</li>
+            <li><span class="code">pseudo/</span>, <span class="code">pseudo_v2/</span>: pseudo-label outputs</li>
+            <li><span class="code">checkpoints/</span>: best models and history files</li>
+            <li><span class="code">submission/</span>: threshold-specific GeoJSON outputs and caches</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Most important scripts</h3>
+          <ul>
+            <li><span class="code">src/labels.py</span>: weak-label fusion</li>
+            <li><span class="code">src/s2_features.py</span>, <span class="code">src/s1_features.py</span>: feature engineering</li>
+            <li><span class="code">src/unet/train.py</span>: main training loop</li>
+            <li><span class="code">src/pseudo_labels_v2.py</span>: pseudo-label generation</li>
+            <li><span class="code">src/submit_v2.py</span>: final submission generation</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>This slide is especially useful for technical walkthrough questions.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Takeaway">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 12</div>
+          <h2>One-Slide Takeaway</h2>
+          <p class="lede">
+            The main idea of the repo is to combine strong learned representations with pseudo-labeling,
+            so that a small amount of train data still produces better deforestation maps.
+          </p>
+        </div>
+        <div class="tag">Closing</div>
+      </div>
+
+      <div class="content grid-3">
+        <div class="card">
+          <h3>1. Common space</h3>
+          <p>S2, S1, AEF, and weak-label sources are aligned on the AEF grid.</p>
+        </div>
+        <div class="card">
+          <h3>2. Two model paths</h3>
+          <p>The U-Net change-detection path and the Clay pretrained-encoder path run side by side.</p>
+        </div>
+        <div class="card">
+          <h3>3. Iterative improvement</h3>
+          <p>Teacher models generate pseudo labels, and pseudo-assisted retraining strengthens the student model.</p>
+        </div>
+      </div>
+
+      <div class="content panel">
+        <h3>One-sentence summary</h3>
+        <p>
+          "In this project, we first fuse multimodal features on the AEF grid, then explore U-Net and Clay-based model families, and finally improve the system with pseudo labels generated from teacher-model agreement."
+        </p>
+      </div>
+
+      <div class="footer">
+        <span>Ready file: <span class="code">slides/deforestation_pipeline_overview.html</span></span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const counter = document.getElementById("counter");
+    const progressBar = document.getElementById("progressBar");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let index = 0;
+
+    function render(targetIndex) {
+      index = Math.max(0, Math.min(slides.length - 1, targetIndex));
+      slides.forEach((slide, i) => {
+        slide.classList.toggle("active", i === index);
+      });
+      counter.textContent = `${index + 1} / ${slides.length}`;
+      progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === slides.length - 1;
+      const title = slides[index].dataset.title || `Slide ${index + 1}`;
+      document.title = `${title} - Deforestation Pipeline Overview`;
+      history.replaceState(null, "", `#slide-${index + 1}`);
+    }
+
+    function fromHash() {
+      const match = window.location.hash.match(/slide-(\d+)/);
+      if (match) {
+        render(parseInt(match[1], 10) - 1);
+      } else {
+        render(0);
+      }
+    }
+
+    prevBtn.addEventListener("click", () => render(index - 1));
+    nextBtn.addEventListener("click", () => render(index + 1));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+        event.preventDefault();
+        render(index + 1);
+      } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        render(index - 1);
+      } else if (event.key === "Home") {
+        render(0);
+      } else if (event.key === "End") {
+        render(slides.length - 1);
+      }
+    });
+
+    window.addEventListener("hashchange", fromHash);
+    fromHash();
+  </script>
+</body>
+</html>

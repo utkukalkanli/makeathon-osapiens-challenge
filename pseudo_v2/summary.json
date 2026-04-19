@@ -1,0 +1,43 @@
+{
+  "per_tile": {
+    "18NVJ_1_6": {
+      "pos_pct": 0.0025563412017595285,
+      "neg_pct": 0.9735532345094098,
+      "ignore_pct": 0.023890424288830665
+    },
+    "18NYH_2_1": {
+      "pos_pct": 0.058175124378109455,
+      "neg_pct": 0.8902935323383084,
+      "ignore_pct": 0.05153134328358209
+    },
+    "33NTE_5_1": {
+      "pos_pct": 0.013714122450923204,
+      "neg_pct": 0.9168670611064154,
+      "ignore_pct": 0.0694188164426614
+    },
+    "47QMA_6_2": {
+      "pos_pct": 3.381792429559253e-05,
+      "neg_pct": 0.9867732130210944,
+      "ignore_pct": 0.01319296905460998
+    },
+    "48PWA_0_6": {
+      "pos_pct": 0.04099587066816921,
+      "neg_pct": 0.8842459552610802,
+      "ignore_pct": 0.07475817407075061
+    }
+  },
+  "totals": {
+    "pos_pct": 0.023084660943544708,
+    "neg_pct": 0.9303544379344922,
+    "ignore_pct": 0.046560901121963094
+  },
+  "thresholds": {
+    "pos_thr": 0.6,
+    "neg_thr": 0.2,
+    "agree_thr": 0.3
+  },
+  "teachers": {
+    "s2_cache": "submission/temporal_s2_pseudo_v2_cache/probs",
+    "s2s1_cache": "submission/temporal_s2s1_norm_v1_cache/probs"
+  }
+}

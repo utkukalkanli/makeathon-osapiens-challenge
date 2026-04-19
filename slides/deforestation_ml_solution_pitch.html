@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deforestation ML Solution Pitch</title>
+  <style>
+    :root {
+      --bg: #f5f2ea;
+      --bg-accent: #e8e0cf;
+      --paper: rgba(255, 252, 246, 0.92);
+      --ink: #172126;
+      --muted: #607078;
+      --line: rgba(23, 33, 38, 0.12);
+      --primary: #0f766e;
+      --secondary: #b45309;
+      --tertiary: #3749d6;
+      --shadow: 0 26px 80px rgba(23, 33, 38, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.10), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(180, 83, 9, 0.10), transparent 34%),
+        linear-gradient(135deg, var(--bg) 0%, #f2eadf 48%, var(--bg-accent) 100%);
+      color: var(--ink);
+      font-family: "Avenir Next", "Segoe UI", "Trebuchet MS", sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: grid;
+      gap: 4px;
+    }
+
+    .eyebrow {
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    .deck-title {
+      margin: 0;
+      font-size: 1.28rem;
+      font-weight: 900;
+    }
+
+    .deck-subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: var(--ink);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 12px 28px rgba(23, 33, 38, 0.14);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 32px rgba(23, 33, 38, 0.18);
+    }
+
+    button:disabled {
+      opacity: 0.35;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .counter {
+      min-width: 76px;
+      text-align: right;
+      color: var(--muted);
+      font-size: 0.94rem;
+      font-weight: 800;
+    }
+
+    .progress {
+      width: 100%;
+      height: 8px;
+      background: rgba(23, 33, 38, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress > div {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width 0.22s ease;
+    }
+
+    .viewport {
+      flex: 1;
+      display: grid;
+      place-items: center;
+    }
+
+    .slide {
+      display: none;
+      width: min(1180px, 100%);
+      min-height: min(78vh, 760px);
+      padding: 34px 38px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.58);
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 249, 240, 0.94)),
+        white;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(55, 73, 214, 0.08), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.08), transparent 28%);
+      pointer-events: none;
+    }
+
+    .slide.active {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      animation: fadeUp 0.28s ease;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .slide-head,
+    .footer,
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .slide-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .slide-number {
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      line-height: 1.03;
+      letter-spacing: -0.03em;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 5vw, 4.9rem);
+      max-width: 12ch;
+    }
+
+    h2 {
+      font-size: clamp(1.95rem, 4vw, 3.1rem);
+      max-width: 14ch;
+    }
+
+    .lede {
+      margin-top: 10px;
+      max-width: 74ch;
+      color: var(--muted);
+      line-height: 1.56;
+      font-size: 1.03rem;
+    }
+
+    .content {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .grid-2,
+    .grid-3,
+    .grid-4,
+    .timeline,
+    .flow,
+    .split,
+    .title-layout {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .timeline {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .flow {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-items: start;
+    }
+
+    .split {
+      grid-template-columns: 1.14fr 0.86fr;
+      align-items: start;
+    }
+
+    .title-layout {
+      grid-template-columns: 1.18fr 0.82fr;
+    }
+
+    .panel,
+    .card,
+    .timeline-step,
+    .flow-step,
+    .callout {
+      border-radius: 22px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      padding: 18px;
+      backdrop-filter: blur(12px);
+    }
+
+    .callout {
+      background:
+        linear-gradient(160deg, rgba(15, 118, 110, 0.12), rgba(55, 73, 214, 0.10)),
+        var(--paper);
+      border-color: rgba(15, 118, 110, 0.14);
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .panel h3,
+    .card h3,
+    .timeline-step h3,
+    .flow-step h3,
+    .callout h3 {
+      margin: 0 0 10px;
+      font-size: 1.08rem;
+      letter-spacing: -0.02em;
+    }
+
+    p,
+    li,
+    .small {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .big-stat {
+      margin-bottom: 8px;
+      font-size: clamp(2.1rem, 4vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: -0.05em;
+    }
+
+    .big-stat.primary {
+      color: var(--primary);
+    }
+
+    .big-stat.secondary {
+      color: var(--secondary);
+    }
+
+    .big-stat.tertiary {
+      color: var(--tertiary);
+    }
+
+    .timeline-step .kicker {
+      margin-bottom: 10px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    .flow-step {
+      min-height: 158px;
+      position: relative;
+    }
+
+    .flow-step::after {
+      content: "->";
+      position: absolute;
+      right: -12px;
+      top: 18px;
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: rgba(23, 33, 38, 0.24);
+    }
+
+    .flow-step:last-child::after {
+      display: none;
+    }
+
+    .code {
+      display: inline-block;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.84rem;
+      background: rgba(23, 33, 38, 0.07);
+      border: 1px solid rgba(23, 33, 38, 0.08);
+      border-radius: 10px;
+      padding: 4px 8px;
+      color: var(--ink);
+      margin: 3px 6px 3px 0;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(15, 118, 110, 0.12);
+      color: var(--primary);
+      font-size: 0.84rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .tag.secondary {
+      background: rgba(180, 83, 9, 0.12);
+      color: var(--secondary);
+    }
+
+    .tag.tertiary {
+      background: rgba(55, 73, 214, 0.12);
+      color: var(--tertiary);
+    }
+
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .legend span {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .dot.primary {
+      background: var(--primary);
+    }
+
+    .dot.secondary {
+      background: var(--secondary);
+    }
+
+    .dot.tertiary {
+      background: var(--tertiary);
+    }
+
+    .accent-bar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .accent-bar > div {
+      height: 8px;
+      border-radius: 999px;
+    }
+
+    .accent-bar > div:nth-child(1) {
+      background: linear-gradient(90deg, rgba(15, 118, 110, 0.18), var(--primary));
+    }
+
+    .accent-bar > div:nth-child(2) {
+      background: linear-gradient(90deg, rgba(180, 83, 9, 0.18), var(--secondary));
+    }
+
+    .accent-bar > div:nth-child(3) {
+      background: linear-gradient(90deg, rgba(55, 73, 214, 0.18), var(--tertiary));
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 980px) {
+      body {
+        padding: 14px;
+      }
+
+      .slide {
+        padding: 24px 22px;
+      }
+
+      .grid-2,
+      .grid-3,
+      .grid-4,
+      .timeline,
+      .flow,
+      .split,
+      .title-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-step::after {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="eyebrow">Makeathon 2026</div>
+      <p class="deck-title">Deforestation Detection ML Solution</p>
+      <p class="deck-subtitle">A problem-solution presentation built around the judging criteria</p>
+    </div>
+    <div class="controls">
+      <button id="prevBtn" type="button">Back</button>
+      <button id="nextBtn" type="button">Next</button>
+      <div class="counter" id="counter">1 / 10</div>
+    </div>
+  </div>
+
+  <div class="progress" aria-hidden="true">
+    <div id="progressBar"></div>
+  </div>
+
+  <main class="viewport">
+    <section class="slide active" data-title="Cover">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 01</div>
+          <h1>Deforestation Detection from Noisy Multimodal Satellite Data</h1>
+          <p class="lede">
+            This presentation is not about the repo structure. It is about the ML solution itself:
+            how we model change, how we handle noisy labels and imagery, how we generalize across regions,
+            and how the design maps to the evaluation criteria.
+          </p>
+        </div>
+        <div class="tag tertiary">Problem-solution narrative</div>
+      </div>
+
+      <div class="content title-layout">
+        <div class="panel">
+          <div class="accent-bar">
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+          <div style="margin-top: 16px;" class="grid-3">
+            <div class="card">
+              <div class="big-stat primary">Weak labels</div>
+              <p>Noisy alert products instead of clean ground truth.</p>
+            </div>
+            <div class="card">
+              <div class="big-stat secondary">Multimodal</div>
+              <p>Optical, radar, and learned geospatial embeddings.</p>
+            </div>
+            <div class="card">
+              <div class="big-stat tertiary">Temporal</div>
+              <p>Persistent change matters more than one-off spikes.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <div class="tag">Core idea</div>
+          <h3>Use multimodal temporal change detection plus pseudo-label refinement.</h3>
+          <p class="small">
+            We combine:
+            <span class="code">weak-label fusion</span>
+            <span class="code">temporal segmentation</span>
+            <span class="code">radar-aware robustness</span>
+            <span class="code">teacher-student pseudo labels</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>Keyboard: Left/Right arrows, Home, End</span>
+        <div class="legend">
+          <span><i class="dot primary"></i> Model design</span>
+          <span><i class="dot secondary"></i> Robustness and scalability</span>
+          <span><i class="dot tertiary"></i> Interpretability</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Challenge">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 02</div>
+          <h2>The Challenge</h2>
+          <p class="lede">
+            We need to detect post-2020 deforestation across multiple geographies, despite noisy labels,
+            missing observations, cloud contamination, and limited training data.
+          </p>
+        </div>
+        <div class="tag secondary">Why this is hard</div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Observational noise</h3>
+          <ul>
+            <li>Optical imagery suffers from cloud cover and varying seasonal visibility</li>
+            <li>Radar is more robust to clouds but can be harder to interpret directly</li>
+            <li>Different regions have different appearance, sensor coverage, and land-use dynamics</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Supervision noise</h3>
+          <ul>
+            <li>Labels come from alert systems, not fully verified dense annotations</li>
+            <li>Different alert products disagree in both space and time</li>
+            <li>Some changes are visible to one modality but not another</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>The solution must be robust, not just accurate on a narrow subset of tiles.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Data Strategy">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 03</div>
+          <h2>Data Strategy</h2>
+          <p class="lede">
+            Instead of relying on a single sensor or a single label source, the solution creates a shared representation
+            from multiple modalities and a more reliable target from multiple weak label products.
+          </p>
+        </div>
+        <div class="tag">Multimodal fusion</div>
+      </div>
+
+      <div class="content grid-4">
+        <div class="card">
+          <h3>AEF embeddings</h3>
+          <p>Provide compact semantic priors, so the model learns change patterns rather than basic land-cover semantics from scratch.</p>
+        </div>
+        <div class="card">
+          <h3>Sentinel-2</h3>
+          <p>Supplies optical vegetation and burn-related signals through NDVI and NBR.</p>
+        </div>
+        <div class="card">
+          <h3>Sentinel-1</h3>
+          <p>Adds cloud-robust radar evidence through annual VV ascending and descending composites.</p>
+        </div>
+        <div class="card">
+          <h3>Weak alerts</h3>
+          <p>GLAD-S2, GLAD-L, and RADD are fused so no single noisy source dominates the target.</p>
+        </div>
+      </div>
+
+      <div class="content panel">
+        <h3>Why this matters</h3>
+        <p>
+          This design directly supports better reasoning, better use of data, and better robustness under noisy conditions,
+          which are all central to the evaluation criteria.
+        </p>
+      </div>
+
+      <div class="footer">
+        <span>Shared grid + multimodal features + fused weak supervision.</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Model Design">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 04</div>
+          <h2>Model Design</h2>
+          <p class="lede">
+            The main algorithm is temporal change segmentation. It predicts a probability map of deforestation by comparing what was there before,
+            what is there now, and how the signal evolved over time.
+          </p>
+        </div>
+        <div class="tag tertiary">Design, reasoning, and use of data</div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Siamese path</h3>
+          <ul>
+            <li>Compares a pre image and a post image</li>
+            <li>Uses shared encoding for both timesteps</li>
+            <li>Focuses on explicit change through <span class="code">[post, |post - pre|]</span></li>
+            <li>Useful as a strong, simple baseline and as an ensemble member</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Temporal path</h3>
+          <ul>
+            <li>Uses the full yearly series instead of only two dates</li>
+            <li>Combines last state, peak deviation, and average deviation over time</li>
+            <li>Better captures sustained forest loss versus temporary fluctuations</li>
+            <li>Especially helpful when one year is cloudy or incomplete</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="content panel">
+        <h3>Algorithm intuition</h3>
+        <p>
+          The model is not asking "what class is this pixel?" in isolation. It is asking
+          "did this pixel undergo a stable forest-loss-like transition across time and modalities?"
+        </p>
+      </div>
+
+      <div class="footer">
+        <span>This is the main answer to "model design, reasoning, and use of data."</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Noisy Labels">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 05</div>
+          <h2>Handling Noisy Labels and Imagery</h2>
+          <p class="lede">
+            The solution is built to be noise-aware at both the target level and the input level.
+          </p>
+        </div>
+        <div class="tag secondary">Noise robustness</div>
+      </div>
+
+      <div class="content timeline">
+        <div class="timeline-step">
+          <div class="kicker">Target</div>
+          <h3>Label fusion</h3>
+          <p>Multiple weak alert products are combined by majority vote, which reduces dependence on any single noisy source.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Target</div>
+          <h3>Soft supervision</h3>
+          <p>The agreement rate between label sources can be used as a softer target instead of a strict binary one.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Input</div>
+          <h3>Validity masks</h3>
+          <p>The model explicitly sees whether S2 or S1 information is missing at a pixel.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Input</div>
+          <h3>Modality dropout</h3>
+          <p>During training, modalities are randomly removed so the network learns to remain stable under missing data.</p>
+        </div>
+        <div class="timeline-step">
+          <div class="kicker">Input</div>
+          <h3>Radar support</h3>
+          <p>Radar helps recover evidence in cloudy tropical regions where optical imagery alone is unreliable.</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>This slide directly addresses "handling of noisy labels and imagery."</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Generalization">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 06</div>
+          <h2>Generalization Across Regions</h2>
+          <p class="lede">
+            A strong model should not overfit to one geography, one season, or one sensor condition.
+            The solution therefore emphasizes cross-region robustness by design.
+          </p>
+        </div>
+        <div class="tag tertiary">Cross-region robustness</div>
+      </div>
+
+      <div class="content grid-3">
+        <div class="card">
+          <h3>Representation choice</h3>
+          <p>AEF embeddings provide a semantically richer and more transferable starting point than raw pixels alone.</p>
+        </div>
+        <div class="card">
+          <h3>Temporal reasoning</h3>
+          <p>Comparing trajectories rather than static appearance helps reduce regional appearance bias.</p>
+        </div>
+        <div class="card">
+          <h3>Radar inclusion</h3>
+          <p>S1 improves robustness in cloud-prone regions such as tropical areas where optical views can fail.</p>
+        </div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Training strategy</h3>
+          <ul>
+            <li>Augmentation increases invariance to orientation and local layout</li>
+            <li>Positive crop sampling prevents the model from collapsing to easy all-negative predictions</li>
+            <li>Validation is done on held-out tiles from distinct contexts</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Expected outcome</h3>
+          <ul>
+            <li>More stable behavior across continents and land-cover contexts</li>
+            <li>Lower dependence on a single sensor regime</li>
+            <li>Better transfer from the small train set to the hidden test distribution</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>This is the direct answer to "generalization across regions."</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Pseudo Labels">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 07</div>
+          <h2>Pseudo Labels as the Improvement Loop</h2>
+          <p class="lede">
+            Pseudo labeling turns the test-distribution unlabeled data into additional training signal, but only where multiple teachers agree with confidence.
+          </p>
+        </div>
+        <div class="tag secondary">Teacher-student refinement</div>
+      </div>
+
+      <div class="content flow">
+        <div class="flow-step">
+          <h3>1. Train teachers</h3>
+          <p>Train strong base models, ideally with complementary error patterns.</p>
+        </div>
+        <div class="flow-step">
+          <h3>2. Predict test tiles</h3>
+          <p>Generate dense probability maps on the unlabeled target distribution.</p>
+        </div>
+        <div class="flow-step">
+          <h3>3. Keep only reliable pixels</h3>
+          <p>Use confidence and agreement thresholds to define positive, negative, and ignore zones.</p>
+        </div>
+        <div class="flow-step">
+          <h3>4. Retrain</h3>
+          <p>Mix real labels with pseudo labels and train a stronger student model.</p>
+        </div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Why it is safe</h3>
+          <ul>
+            <li>Only agreed, confident pixels are trusted</li>
+            <li>Disagreement regions are masked out instead of forced</li>
+            <li>This reduces self-training collapse</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Why it is powerful</h3>
+          <ul>
+            <li>It adapts the model to the test distribution</li>
+            <li>It increases effective supervision without manual labeling</li>
+            <li>It usually improves both recall and robustness</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>This is a strong answer to both "handling noise" and "generalization."</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Performance">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 08</div>
+          <h2>Quantitative Performance and Scalability</h2>
+          <p class="lede">
+            The solution is designed not only to perform well, but also to scale operationally.
+          </p>
+        </div>
+        <div class="tag">Performance + scalability</div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Performance side</h3>
+          <ul>
+            <li>Validation uses full-tile inference, not only crop-level accuracy</li>
+            <li>Threshold sweeps allow operating-point tuning for the final task</li>
+            <li>Ensembling siamese and temporal teachers can improve stability</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Scalability side</h3>
+          <ul>
+            <li>Annual feature composites reduce raw data volume</li>
+            <li>Sliding-window inference supports large tiles</li>
+            <li>Cached probability maps make threshold selection cheap</li>
+            <li>Pseudo-label reuse avoids recomputing the entire pipeline repeatedly</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="content grid-3">
+        <div class="card">
+          <h3>Computation</h3>
+          <p>Feature caching and tile-wise processing help keep the pipeline practical.</p>
+        </div>
+        <div class="card">
+          <h3>Deployment fit</h3>
+          <p>The same algorithmic structure works for both validation and full test inference.</p>
+        </div>
+        <div class="card">
+          <h3>Submission fit</h3>
+          <p>The output is already aligned with polygon generation and time-step estimation.</p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>This slide answers "quantitative performance and scalability."</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Interpretability">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 09</div>
+          <h2>Interpretability and Presentation Quality</h2>
+          <p class="lede">
+            A good hackathon solution should be understandable, inspectable, and easy to explain to both technical and non-technical reviewers.
+          </p>
+        </div>
+        <div class="tag tertiary">Clarity and interpretability</div>
+      </div>
+
+      <div class="content grid-3">
+        <div class="card">
+          <h3>Probabilities, not only labels</h3>
+          <p>The model produces probability maps, which support calibration, threshold tuning, and uncertainty reasoning.</p>
+        </div>
+        <div class="card">
+          <h3>Time-step estimation</h3>
+          <p>Polygon-level event timing can be tied back to NDVI drops, which gives a simple ecological explanation.</p>
+        </div>
+        <div class="card">
+          <h3>Readable experiment progression</h3>
+          <p>Each experiment family reflects one modeling decision: add S2, add S1, normalize, pseudo-retrain, ensemble.</p>
+        </div>
+      </div>
+
+      <div class="content panel">
+        <h3>Presentation principle</h3>
+        <p>
+          The model should be explained as a sequence of decisions:
+          shared grid, multimodal features, temporal change modeling, noise-aware supervision, and pseudo-label refinement.
+          That story is easier for judges to follow than a long list of engineering details.
+        </p>
+      </div>
+
+      <div class="footer">
+        <span>This slide maps to "clarity, interpretability, and presentation quality."</span>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Evaluation Mapping">
+      <div class="slide-head">
+        <div>
+          <div class="slide-number">Slide 10</div>
+          <h2>How the Solution Maps to the Evaluation Criteria</h2>
+          <p class="lede">
+            This is the one-slide rubric alignment. It makes the judging logic explicit.
+          </p>
+        </div>
+        <div class="tag">What we evaluate</div>
+      </div>
+
+      <div class="content grid-2">
+        <div class="panel">
+          <h3>Criterion -> answer</h3>
+          <ul>
+            <li><strong>Model design, reasoning, and use of data:</strong> multimodal temporal change segmentation with complementary siamese and temporal paths</li>
+            <li><strong>Handling noisy labels and imagery:</strong> weak-label fusion, validity masks, modality dropout, radar support, confidence-based pseudo labels</li>
+            <li><strong>Generalization across regions:</strong> AEF priors, temporal reasoning, multimodal robustness, and held-out validation</li>
+            <li><strong>Quantitative performance and scalability:</strong> full-tile inference, threshold sweeps, caching, and efficient pseudo-label reuse</li>
+            <li><strong>Clarity, interpretability, and presentation quality:</strong> explainable pipeline, probability maps, time-step estimation, and a simple narrative</li>
+          </ul>
+        </div>
+        <div class="callout">
+          <div class="tag secondary">30-second ending</div>
+          <h3>One-line pitch</h3>
+          <p>
+            We solve deforestation detection as a multimodal, temporal, noise-aware segmentation problem, then improve robustness and transfer with teacher-agreement pseudo labels.
+          </p>
+          <p class="small">
+            Ready file:
+            <span class="code">slides/deforestation_ml_solution_pitch.html</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>This is the best closing slide if you want to sound aligned with the jury rubric.</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const counter = document.getElementById("counter");
+    const progressBar = document.getElementById("progressBar");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let index = 0;
+
+    function render(targetIndex) {
+      index = Math.max(0, Math.min(slides.length - 1, targetIndex));
+      slides.forEach((slide, i) => {
+        slide.classList.toggle("active", i === index);
+      });
+      counter.textContent = `${index + 1} / ${slides.length}`;
+      progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === slides.length - 1;
+      const title = slides[index].dataset.title || `Slide ${index + 1}`;
+      document.title = `${title} - Deforestation ML Solution`;
+      history.replaceState(null, "", `#slide-${index + 1}`);
+    }
+
+    function fromHash() {
+      const match = window.location.hash.match(/slide-(\d+)/);
+      if (match) {
+        render(parseInt(match[1], 10) - 1);
+      } else {
+        render(0);
+      }
+    }
+
+    prevBtn.addEventListener("click", () => render(index - 1));
+    nextBtn.addEventListener("click", () => render(index + 1));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+        event.preventDefault();
+        render(index + 1);
+      } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        render(index - 1);
+      } else if (event.key === "Home") {
+        render(0);
+      } else if (event.key === "End") {
+        render(slides.length - 1);
+      }
+    });
+
+    window.addEventListener("hashchange", fromHash);
+    fromHash();
+  </script>
+</body>
+</html>
