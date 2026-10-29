@@ -9,6 +9,7 @@ import { CHAPTERS } from "./story/chapters";
 import { Story } from "./story/Story";
 import { ExplorePanel } from "./explore/ExplorePanel";
 import { Loading } from "./components/Loading";
+import { setScrollLock } from "./story/scrollLock";
 
 const FLY_DURATION_MS = 2500;
 /** The loading overlay never outlives this, even if slow tiles hold back the map's first idle. */
@@ -25,6 +26,12 @@ export default function App() {
     const t = window.setTimeout(() => setLoaded(true), LOADING_TIMEOUT_MS);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    window.scrollTo(0, 0);
+    setScrollLock(document, false);
+  }, [loaded]);
 
   const [exploreState, setExploreState] = useState<LayerState>(() => ({
     ...DEFAULT_LAYERS,
