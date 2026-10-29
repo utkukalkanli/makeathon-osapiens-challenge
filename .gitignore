@@ -11,8 +11,7 @@ venv/
 env/
 
 # Data, caches, trained artifacts — never commit
-data/
-!web/public/data/
+/data/
 cache/
 cache_clay/
 checkpoints/
