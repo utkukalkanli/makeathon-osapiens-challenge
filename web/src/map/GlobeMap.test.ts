@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { createAutoRotate, shouldFallback } from "./GlobeMap";
+import { createAutoRotate, createFallbackCounter, shouldFallback } from "./GlobeMap";
 
 test("basemap falls back to EOX after repeated Esri errors", () => {
   expect(shouldFallback(7)).toBe(false);
@@ -12,4 +12,12 @@ test("autoRotate stops after user interaction", () => {
   r.interact();
   expect(r.active).toBe(false);
   expect(r.tick(1000)).toBe(0);
+});
+
+test("fallback counts consecutive Esri errors; a successful tile resets the streak", () => {
+  const c = createFallbackCounter();
+  for (let i = 0; i < 7; i++) expect(c.error()).toBe(false);
+  c.success();
+  for (let i = 0; i < 7; i++) expect(c.error()).toBe(false);
+  expect(c.error()).toBe(true);
 });

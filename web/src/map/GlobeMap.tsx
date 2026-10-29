@@ -15,6 +15,24 @@ export function shouldFallback(errorCount: number): boolean {
   return errorCount >= FALLBACK_AFTER_ERRORS;
 }
 
+export interface FallbackCounter {
+  /** Record a failed basemap tile; true once the streak warrants a fallback. */
+  error(): boolean;
+  /** Record a loaded basemap tile: the failure streak starts over. */
+  success(): void;
+}
+
+/** Counts *consecutive* basemap failures, so scattered 404s never trigger the fallback. */
+export function createFallbackCounter(): FallbackCounter {
+  let streak = 0;
+  return {
+    error: () => shouldFallback(++streak),
+    success: () => {
+      streak = 0;
+    },
+  };
+}
+
 /** Degrees of spin per second while idling in orbit. */
 export const AUTO_ROTATE_DEG_PER_SEC = 3;
 
@@ -180,22 +198,35 @@ export function GlobeMap({ tiles, onReady, autoRotate = true }: GlobeMapProps) {
     mapRef.current = map;
     if (import.meta.env.DEV) (window as unknown as { __orbitreeMap?: maplibregl.Map }).__orbitreeMap = map;
 
-    // Basemap resilience: after repeated Esri failures swap to EOX Sentinel-2 cloudless.
-    let satelliteErrors = 0;
+    // Basemap resilience: after a streak of Esri failures swap to EOX Sentinel-2 cloudless.
+    const fallback = createFallbackCounter();
     let fellBack = false;
+    let switching = false;
     let disposed = false;
+    map.on("sourcedata", (e) => {
+      if (e.sourceId === SATELLITE_SOURCE && e.tile && !fellBack) fallback.success();
+    });
     map.on("error", (e: maplibregl.ErrorEvent & { sourceId?: string }) => {
       if (e.sourceId === SATELLITE_SOURCE) {
-        if (fellBack) return;
-        satelliteErrors += 1;
-        if (shouldFallback(satelliteErrors)) {
-          fellBack = true;
-          // Defer out of the error callback (MapLibre is mid-dispatch here).
-          setTimeout(() => {
-            if (!disposed) switchToEox(map);
-          }, 0);
-          console.warn(`Esri imagery failed ${satelliteErrors}×; basemap switched to EOX Sentinel-2 cloudless.`);
+        if (fellBack) {
+          console.warn("EOX basemap tile failed:", e.error?.message);
+          return;
         }
+        if (switching || !fallback.error()) return;
+        switching = true;
+        // Defer out of the error callback (MapLibre is mid-dispatch here).
+        setTimeout(() => {
+          if (disposed) return;
+          try {
+            switchToEox(map);
+            fellBack = true;
+            console.warn("Esri imagery failed repeatedly; basemap switched to EOX Sentinel-2 cloudless.");
+          } catch (err) {
+            console.error("Basemap fallback failed", err);
+          } finally {
+            switching = false;
+          }
+        }, 0);
         return;
       }
       console.error(e.error);
@@ -209,10 +240,17 @@ export function GlobeMap({ tiles, onReady, autoRotate = true }: GlobeMapProps) {
     canvasContainer.addEventListener("touchstart", stop, opts);
     canvasContainer.addEventListener("wheel", stop, opts);
 
-    map.on("load", () => {
+    // Init on style load, not "load": "load" waits for every in-view tile, so one hanging
+    // basemap request would otherwise hold back the pins and onReady indefinitely.
+    let initialized = false;
+    const init = () => {
+      if (initialized || disposed) return;
+      initialized = true;
       addPins(map, tilesRef.current);
       onReadyRef.current?.(map);
-    });
+    };
+    if (map.isStyleLoaded()) init();
+    else map.once("style.load", init);
 
     let raf = 0;
     let last = performance.now();
