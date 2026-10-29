@@ -5,3 +5,33 @@
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; min-height: 100%; background: var(--bg); color: #e8ecf4;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+html { background: var(--bg); }
+
+/* ---------- globe ---------- */
+.app { position: fixed; inset: 0; overflow: hidden; }
+.globe {
+  position: absolute; inset: 0; overflow: hidden;
+  /* Deep-space wash under the stars: a faint blue haze where the planet sits. */
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 50%, rgba(30, 64, 120, 0.18), transparent 70%),
+    radial-gradient(ellipse 90% 70% at 80% 10%, rgba(76, 29, 149, 0.08), transparent 70%),
+    var(--bg);
+}
+.starfield { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.globe-map { position: absolute; inset: 0; background: transparent; }
+.globe-map .maplibregl-canvas { outline: none; }
+.globe-map .maplibregl-ctrl-attrib {
+  background: rgba(2, 4, 10, 0.6); color: #9aa4b8; font-size: 11px; backdrop-filter: blur(6px);
+}
+.globe-map .maplibregl-ctrl-attrib a { color: #c7d2e6; }
+.globe-map .maplibregl-ctrl-attrib-button { filter: invert(1) opacity(0.7); }
+
+.globe-fallback {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(28rem, calc(100% - 2rem)); padding: 1.5rem 1.75rem;
+  background: rgba(8, 14, 28, 0.82); border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px; backdrop-filter: blur(10px); line-height: 1.5; color: #cbd5e1;
+}
+.globe-fallback p { margin: 0 0 0.5rem; }
+.globe-fallback__title { font-size: 1.15rem; font-weight: 600; color: #f1f5f9; }
+.globe-fallback__hint { color: #94a3b8; font-size: 0.9rem; margin-bottom: 0 !important; }
