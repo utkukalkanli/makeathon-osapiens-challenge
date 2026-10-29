@@ -11,7 +11,7 @@ venv/
 env/
 
 # Data, caches, trained artifacts — never commit
-data/
+/data/
 cache/
 cache_clay/
 checkpoints/
@@ -32,3 +32,10 @@ Thumbs.db
 .codex
 .claude
 
+
+# Brainstorm companion
+.superpowers/
+
+.venv-web/
+web/node_modules/
+web/dist/

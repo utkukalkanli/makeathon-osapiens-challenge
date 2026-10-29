@@ -1,0 +1,56 @@
+[
+ {
+  "id": "temporal_s2s1_norm_pseudo_v1_thr040",
+  "label": "S2+S1 \u00b7 norm \u00b7 pseudo v1 \u00b7 thr 0.40",
+  "threshold": 0.4,
+  "featured": true
+ },
+ {
+  "id": "temporal_s2_pseudo_v2",
+  "label": "S2 \u00b7 pseudo v2",
+  "threshold": null,
+  "featured": false
+ },
+ {
+  "id": "temporal_s2_pseudo_v2_thr015",
+  "label": "S2 \u00b7 pseudo v2 \u00b7 thr 0.15",
+  "threshold": 0.15,
+  "featured": false
+ },
+ {
+  "id": "temporal_s2_pseudo_v2_thr020",
+  "label": "S2 \u00b7 pseudo v2 \u00b7 thr 0.20",
+  "threshold": 0.2,
+  "featured": false
+ },
+ {
+  "id": "temporal_s2_pseudo_v2_thr025",
+  "label": "S2 \u00b7 pseudo v2 \u00b7 thr 0.25",
+  "threshold": 0.25,
+  "featured": false
+ },
+ {
+  "id": "temporal_s2_pseudo_v2_thr035",
+  "label": "S2 \u00b7 pseudo v2 \u00b7 thr 0.35",
+  "threshold": 0.35,
+  "featured": false
+ },
+ {
+  "id": "temporal_s2_pseudo_v2_thr040",
+  "label": "S2 \u00b7 pseudo v2 \u00b7 thr 0.40",
+  "threshold": 0.4,
+  "featured": false
+ },
+ {
+  "id": "temporal_s2s1_norm_v1_thr015",
+  "label": "S2+S1 \u00b7 norm \u00b7 v1 \u00b7 thr 0.15",
+  "threshold": 0.15,
+  "featured": false
+ },
+ {
+  "id": "temporal_s2s1_pseudo_v1_thr048",
+  "label": "S2+S1 \u00b7 pseudo v1 \u00b7 thr 0.48",
+  "threshold": 0.48,
+  "featured": false
+ }
+]

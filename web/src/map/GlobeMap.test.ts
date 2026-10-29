@@ -1,0 +1,50 @@
+import { expect, test } from "vitest";
+import { createAutoRotate, createFallbackCounter, shouldFallback } from "./GlobeMap";
+
+test("basemap falls back to EOX after repeated Esri errors", () => {
+  expect(shouldFallback(7)).toBe(false);
+  expect(shouldFallback(8)).toBe(true);
+});
+
+test("autoRotate stops after user interaction", () => {
+  const r = createAutoRotate();
+  expect(r.tick(1000)).toBeGreaterThan(0);
+  r.interact();
+  expect(r.active).toBe(false);
+  expect(r.tick(1000)).toBe(0);
+});
+
+test("fallback counts consecutive Esri errors; a successful tile resets the streak", () => {
+  const c = createFallbackCounter();
+  for (let i = 0; i < 7; i++) expect(c.error()).toBe(false);
+  c.success();
+  for (let i = 0; i < 7; i++) expect(c.error()).toBe(false);
+  expect(c.error()).toBe(true);
+});
+
+test("wheel only stops the spin while scroll-zoom is on; press/touch always do", async () => {
+  const { countsAsInteraction } = await import("./GlobeMap");
+  expect(countsAsInteraction("wheel", false)).toBe(false);
+  expect(countsAsInteraction("wheel", true)).toBe(true);
+  expect(countsAsInteraction("mousedown", false)).toBe(true);
+  expect(countsAsInteraction("touchstart", false)).toBe(true);
+  expect(countsAsInteraction("mousemove", true)).toBe(false);
+});
+
+test("hasWebGL is false when the browser hands out no WebGL context (or throws)", async () => {
+  const { hasWebGL } = await import("./GlobeMap");
+  const proto = HTMLCanvasElement.prototype as unknown as { getContext: unknown };
+  const original = proto.getContext;
+  try {
+    proto.getContext = () => null;
+    expect(hasWebGL()).toBe(false);
+    proto.getContext = () => {
+      throw new Error("blocked");
+    };
+    expect(hasWebGL()).toBe(false);
+    proto.getContext = (kind: string) => (kind === "webgl" ? {} : null);
+    expect(hasWebGL()).toBe(true);
+  } finally {
+    proto.getContext = original;
+  }
+});

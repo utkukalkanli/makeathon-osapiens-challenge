@@ -1,0 +1,500 @@
+[
+ {
+  "id": "47QMB_0_8",
+  "split": "train",
+  "country": "Thailand",
+  "bounds": [
+   98.04894008094033,
+   19.08044742830771,
+   98.14450303704321,
+   19.171278531576576
+  ],
+  "center": [
+   98.09673464110053,
+   19.125866481711995
+  ],
+  "labelStats": {
+   "alertedPx": 12646,
+   "singleSourcePct": 95.6,
+   "allAgreePct": 0.0,
+   "glads2Pct": 0.0,
+   "gladlPct": 0.8,
+   "raddPct": 0.5
+  }
+ },
+ {
+  "id": "48PWV_7_8",
+  "split": "train",
+  "country": "Cambodia",
+  "bounds": [
+   105.64486810088023,
+   12.753589884321434,
+   105.73724968787424,
+   12.844253403563467
+  ],
+  "center": [
+   105.69105055502725,
+   12.79892388787429
+  ],
+  "labelStats": {
+   "alertedPx": 470802,
+   "singleSourcePct": 47.0,
+   "allAgreePct": 0.0,
+   "glads2Pct": 0.0,
+   "gladlPct": 27.4,
+   "raddPct": 43.2
+  }
+ },
+ {
+  "id": "48PUT_0_8",
+  "split": "train",
+  "country": "Cambodia",
+  "bounds": [
+   103.16933334025447,
+   10.940437883804275,
+   103.26136591686864,
+   11.031370605246481
+  ],
+  "center": [
+   103.21535693569088,
+   10.985905408280273
+  ],
+  "labelStats": {
+   "alertedPx": 74430,
+   "singleSourcePct": 70.8,
+   "allAgreePct": 0.0,
+   "glads2Pct": 0.0,
+   "gladlPct": 3.5,
+   "raddPct": 6.0
+  }
+ },
+ {
+  "id": "48QWD_2_2",
+  "split": "train",
+  "country": "Laos",
+  "bounds": [
+   105.18780739018658,
+   16.913432464170235,
+   105.2818451318778,
+   17.003935583809046
+  ],
+  "center": [
+   105.23481498959366,
+   16.958687473512967
+  ],
+  "labelStats": {
+   "alertedPx": 182445,
+   "singleSourcePct": 66.3,
+   "allAgreePct": 0.0,
+   "glads2Pct": 0.0,
+   "gladlPct": 9.7,
+   "raddPct": 13.7
+  }
+ },
+ {
+  "id": "48PXC_7_7",
+  "split": "train",
+  "country": "Laos",
+  "bounds": [
+   106.58525062737831,
+   15.55120316876013,
+   106.67920746640706,
+   15.642266082437818
+  ],
+  "center": [
+   106.63221854578617,
+   15.59673687069687
+  ],
+  "labelStats": {
+   "alertedPx": 151796,
+   "singleSourcePct": 56.0,
+   "allAgreePct": 0.0,
+   "glads2Pct": 0.0,
+   "gladlPct": 9.1,
+   "raddPct": 12.1
+  }
+ },
+ {
+  "id": "48PYB_3_6",
+  "split": "train",
+  "country": "Vietnam",
+  "bounds": [
+   107.13633400888926,
+   14.733156079488714,
+   107.23009110544798,
+   14.824382666281467
+  ],
+  "center": [
+   107.18320255654173,
+   14.778771087376334
+  ],
+  "labelStats": {
+   "alertedPx": 215469,
+   "singleSourcePct": 45.7,
+   "allAgreePct": 0.0,
+   "glads2Pct": 0.0,
+   "gladlPct": 12.9,
+   "raddPct": 19.4
+  }
+ },
+ {
+  "id": "47QQV_2_4",
+  "split": "train",
+  "country": "Thailand\u2013Laos border",
+  "bounds": [
+   101.07346364514554,
+   17.624859095877085,
+   101.1687465077364,
+   17.716201727088677
+  ],
+  "center": [
+   101.12109294187738,
+   17.670532792483964
+  ],
+  "labelStats": {
+   "alertedPx": 10934,
+   "singleSourcePct": 97.2,
+   "allAgreePct": 0.0,
+   "glads2Pct": 0.0,
+   "gladlPct": 0.4,
+   "raddPct": 0.7
+  }
+ },
+ {
+  "id": "48QVE_3_0",
+  "split": "train",
+  "country": "Laos",
+  "bounds": [
+   104.33845027791828,
+   17.997194923134487,
+   104.43324324337833,
+   18.08787573482811
+  ],
+  "center": [
+   104.38585893549886,
+   18.04253877510317
+  ],
+  "labelStats": {
+   "alertedPx": 188043,
+   "singleSourcePct": 62.9,
+   "allAgreePct": 0.0,
+   "glads2Pct": 0.0,
+   "gladlPct": 9.3,
+   "raddPct": 15.4
+  }
+ },
+ {
+  "id": "18NXH_6_8",
+  "split": "train",
+  "country": "Colombia",
+  "bounds": [
+   -73.56148712241117,
+   1.899248889344357,
+   -73.47151954734554,
+   1.989769899874641
+  ],
+  "center": [
+   -73.516504836039,
+   1.944508871283473
+  ],
+  "labelStats": {
+   "alertedPx": 343302,
+   "singleSourcePct": 38.3,
+   "allAgreePct": 28.6,
+   "glads2Pct": 31.3,
+   "gladlPct": 18.4,
+   "raddPct": 16.1
+  }
+ },
+ {
+  "id": "18NWG_6_6",
+  "split": "train",
+  "country": "Colombia",
+  "bounds": [
+   -74.4606903026047,
+   1.176077747339904,
+   -74.37078769286984,
+   1.266565371709559
+  ],
+  "center": [
+   -74.41573986954155,
+   1.2213214473842153
+  ],
+  "labelStats": {
+   "alertedPx": 350975,
+   "singleSourcePct": 31.1,
+   "allAgreePct": 31.0,
+   "glads2Pct": 29.0,
+   "gladlPct": 16.0,
+   "raddPct": 25.6
+  }
+ },
+ {
+  "id": "18NWJ_8_9",
+  "split": "train",
+  "country": "Colombia",
+  "bounds": [
+   -74.28027727818586,
+   2.713901306862926,
+   -74.19025644074343,
+   2.80442232391108
+  ],
+  "center": [
+   -74.23526871653843,
+   2.759161908140915
+  ],
+  "labelStats": {
+   "alertedPx": 79359,
+   "singleSourcePct": 63.9,
+   "allAgreePct": 8.7,
+   "glads2Pct": 6.2,
+   "gladlPct": 1.7,
+   "raddPct": 3.6
+  }
+ },
+ {
+  "id": "18NXJ_7_6",
+  "split": "train",
+  "country": "Colombia",
+  "bounds": [
+   -73.47037377842138,
+   2.984387853893243,
+   -73.38028485038463,
+   3.074955429340234
+  ],
+  "center": [
+   -73.42533150315407,
+   3.0296712851593854
+  ],
+  "labelStats": {
+   "alertedPx": 27064,
+   "singleSourcePct": 64.4,
+   "allAgreePct": 10.6,
+   "glads2Pct": 1.8,
+   "gladlPct": 1.1,
+   "raddPct": 1.1
+  }
+ },
+ {
+  "id": "18NWH_1_4",
+  "split": "train",
+  "country": "Colombia",
+  "bounds": [
+   -74.91006296200761,
+   2.261805420243951,
+   -74.82011478096409,
+   2.35228537962171
+  ],
+  "center": [
+   -74.8650903200857,
+   2.307045792180849
+  ],
+  "labelStats": {
+   "alertedPx": 31555,
+   "singleSourcePct": 66.3,
+   "allAgreePct": 11.5,
+   "glads2Pct": 1.8,
+   "gladlPct": 0.7,
+   "raddPct": 2.1
+  }
+ },
+ {
+  "id": "18NYH_9_9",
+  "split": "train",
+  "country": "Colombia",
+  "bounds": [
+   -72.39345823517564,
+   1.807441235883508,
+   -72.30350648609526,
+   1.897951195262004
+  ],
+  "center": [
+   -72.34848404209954,
+   1.852694946839949
+  ],
+  "labelStats": {
+   "alertedPx": 202252,
+   "singleSourcePct": 38.4,
+   "allAgreePct": 30.4,
+   "glads2Pct": 16.0,
+   "gladlPct": 10.5,
+   "raddPct": 12.5
+  }
+ },
+ {
+  "id": "19NBD_4_4",
+  "split": "train",
+  "country": "Colombia",
+  "bounds": [
+   -71.33965238044343,
+   3.163875889469201,
+   -71.24951559401981,
+   3.254475900905676
+  ],
+  "center": [
+   -71.2945815431385,
+   3.2091751273731233
+  ],
+  "labelStats": {
+   "alertedPx": 101072,
+   "singleSourcePct": 53.8,
+   "allAgreePct": 3.8,
+   "glads2Pct": 9.3,
+   "gladlPct": 5.1,
+   "raddPct": 0.9
+  }
+ },
+ {
+  "id": "18NWM_9_4",
+  "split": "train",
+  "country": "Colombia",
+  "bounds": [
+   -74.18697030757902,
+   5.879816372141462,
+   -74.09649385839487,
+   5.97040946357571
+  ],
+  "center": [
+   -74.1417359330723,
+   5.925113607435124
+  ],
+  "labelStats": {
+   "alertedPx": 67245,
+   "singleSourcePct": 61.2,
+   "allAgreePct": 10.5,
+   "glads2Pct": 3.8,
+   "gladlPct": 2.3,
+   "raddPct": 3.9
+  }
+ },
+ {
+  "id": "18NVJ_1_6",
+  "split": "test",
+  "country": "Colombia",
+  "bounds": [
+   -75.80993926263116,
+   2.985286688127343,
+   -75.71989131153215,
+   3.075812994295774
+  ],
+  "center": [
+   -75.76491326213501,
+   3.0305499898985215
+  ],
+  "hectares": {
+   "temporal_s2s1_norm_pseudo_v1_thr040": 26.8,
+   "temporal_s2_pseudo_v2": 108.2,
+   "temporal_s2_pseudo_v2_thr015": 462.2,
+   "temporal_s2_pseudo_v2_thr020": 165.7,
+   "temporal_s2_pseudo_v2_thr025": 133.0,
+   "temporal_s2_pseudo_v2_thr035": 93.1,
+   "temporal_s2_pseudo_v2_thr040": 78.3,
+   "temporal_s2s1_norm_v1_thr015": 54.4,
+   "temporal_s2s1_pseudo_v1_thr048": 7.3
+  }
+ },
+ {
+  "id": "18NYH_2_1",
+  "split": "test",
+  "country": "Colombia",
+  "bounds": [
+   -73.02139128588172,
+   2.53157162860975,
+   -72.93134709847922,
+   2.622129731562484
+  ],
+  "center": [
+   -72.97637119217659,
+   2.576849950738696
+  ],
+  "hectares": {
+   "temporal_s2s1_norm_pseudo_v1_thr040": 725.7,
+   "temporal_s2_pseudo_v2": 855.0,
+   "temporal_s2_pseudo_v2_thr015": 1123.0,
+   "temporal_s2_pseudo_v2_thr020": 887.2,
+   "temporal_s2_pseudo_v2_thr025": 912.0,
+   "temporal_s2_pseudo_v2_thr035": 805.8,
+   "temporal_s2_pseudo_v2_thr040": 764.8,
+   "temporal_s2s1_norm_v1_thr015": 839.0,
+   "temporal_s2s1_pseudo_v1_thr048": 560.2
+  }
+ },
+ {
+  "id": "33NTE_5_1",
+  "split": "test",
+  "country": "Cameroon",
+  "bounds": [
+   12.747204550894384,
+   4.339262054900177,
+   12.837532153364075,
+   4.429928685938306
+  ],
+  "center": [
+   12.792371506310664,
+   4.384594898642741
+  ],
+  "hectares": {
+   "temporal_s2s1_norm_pseudo_v1_thr040": 309.6,
+   "temporal_s2_pseudo_v2": 583.3,
+   "temporal_s2_pseudo_v2_thr015": 870.0,
+   "temporal_s2_pseudo_v2_thr020": 736.5,
+   "temporal_s2_pseudo_v2_thr025": 643.7,
+   "temporal_s2_pseudo_v2_thr035": 532.6,
+   "temporal_s2_pseudo_v2_thr040": 490.9,
+   "temporal_s2s1_norm_v1_thr015": 216.9,
+   "temporal_s2s1_pseudo_v1_thr048": 259.4
+  }
+ },
+ {
+  "id": "47QMA_6_2",
+  "split": "test",
+  "country": "Thailand",
+  "bounds": [
+   98.62038000964837,
+   18.721002806222213,
+   98.71543563572095,
+   18.811548894937527
+  ],
+  "center": [
+   98.66792051893346,
+   18.766279645314427
+  ],
+  "hectares": {
+   "temporal_s2s1_norm_pseudo_v1_thr040": 0.0,
+   "temporal_s2_pseudo_v2": 6.9,
+   "temporal_s2_pseudo_v2_thr015": 168.9,
+   "temporal_s2_pseudo_v2_thr020": 35.0,
+   "temporal_s2_pseudo_v2_thr025": 16.2,
+   "temporal_s2_pseudo_v2_thr035": 3.2,
+   "temporal_s2_pseudo_v2_thr040": 2.1,
+   "temporal_s2s1_norm_v1_thr015": 14.2,
+   "temporal_s2s1_pseudo_v1_thr048": 0.0
+  }
+ },
+ {
+  "id": "48PWA_0_6",
+  "split": "test",
+  "country": "Cambodia",
+  "bounds": [
+   105.0,
+   13.839700264735775,
+   105.09257255955391,
+   13.93013855575567
+  ],
+  "center": [
+   105.04627730118838,
+   13.884922301557934
+  ],
+  "hectares": {
+   "temporal_s2s1_norm_pseudo_v1_thr040": 534.8,
+   "temporal_s2_pseudo_v2": 774.3,
+   "temporal_s2_pseudo_v2_thr015": 1302.1,
+   "temporal_s2_pseudo_v2_thr020": 1008.7,
+   "temporal_s2_pseudo_v2_thr025": 874.0,
+   "temporal_s2_pseudo_v2_thr035": 696.3,
+   "temporal_s2_pseudo_v2_thr040": 627.4,
+   "temporal_s2s1_norm_v1_thr015": 907.7,
+   "temporal_s2s1_pseudo_v1_thr048": 439.0
+  }
+ }
+]
