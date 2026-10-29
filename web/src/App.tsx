@@ -80,7 +80,7 @@ export default function App() {
           scrollZoom={explore}
         />
       </div>
-      <Story chapters={CHAPTERS} onStepChange={setStep} />
+      <Story chapters={CHAPTERS} tiles={tiles} models={models} onStepChange={setStep} />
     </main>
   );
 }

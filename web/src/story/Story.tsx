@@ -1,29 +1,60 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
-import type { Chapter, Step } from "../data/types";
+import type { Chapter, ModelMeta, Step, Tile } from "../data/types";
 import { pickActiveStep } from "./activeStep";
+import { DISAGREE_TILE } from "./chapters";
+import { Opening } from "./content/Opening";
+import { Disagree } from "./content/Disagree";
+import { Approach } from "./content/Approach";
+import { Unseen } from "./content/Unseen";
+import { Credits } from "../components/Credits";
 
 /** Fraction of the viewport height where a step becomes active. */
 export const ANCHOR = 0.5;
 
-/** Placeholder copy; Task 7 replaces this with a step id -> content component map. */
-const PLACEHOLDER: Record<string, ReactNode> = {
-  opening: <><h1>Orbitree</h1><p>Watching the world's forests from orbit.</p></>,
-  "disagree-agreement": <><h2>Three alert systems</h2><p>Where do GLAD-S2, GLAD-L and RADD agree?</p></>,
-  "disagree-sources": <><h2>They often disagree</h2><p>Each source on its own tells a different story.</p></>,
-  approach: <><h2>Our approach</h2><p>Learning from noisy, conflicting labels.</p></>,
-  "unseen-colombia": <><h2>Unseen: Colombia</h2><p>Predictions on a region the model never saw.</p></>,
-  "unseen-cameroon": <><h2>Unseen: Cameroon</h2><p>Predictions against GFW integrated alerts.</p></>,
-  "unseen-cambodia": <><h2>Unseen: Cambodia</h2><p>Predictions against GFW integrated alerts.</p></>,
-  explore: <><h2>Explore</h2><p>Spin the globe and pick any tile.</p></>,
-};
+interface ContentContext {
+  tiles: Tile[];
+  models: ModelMeta[];
+}
+
+const tileById = (ctx: ContentContext, id: string) => ctx.tiles.find((t) => t.id === id);
+const featured = (ctx: ContentContext) => ctx.models.find((m) => m.featured);
+
+/** Step id -> chapter content. Unseen steps resolve their tile from the step camera. */
+export function stepContent(step: Step, ctx: ContentContext): ReactNode {
+  switch (step.id) {
+    case "opening":
+      return <Opening />;
+    case "disagree-agreement":
+      return <Disagree tile={tileById(ctx, DISAGREE_TILE)} view="agreement" />;
+    case "disagree-sources":
+      return <Disagree tile={tileById(ctx, DISAGREE_TILE)} view="sources" />;
+    case "approach":
+      return <Approach />;
+    case "explore":
+      // Task 8 replaces this with the explore panel.
+      return (
+        <>
+          <h2>Explore</h2>
+          <p>Spin the globe and pick any tile.</p>
+          <Credits />
+        </>
+      );
+  }
+  if (step.id.startsWith("unseen-") && "tileId" in step.camera) {
+    return <Unseen tile={tileById(ctx, step.camera.tileId)} model={featured(ctx)} />;
+  }
+  return <p>{step.id}</p>;
+}
 
 export interface StoryProps {
   chapters: Chapter[];
+  tiles: Tile[];
+  models: ModelMeta[];
   onStepChange: (step: Step) => void;
 }
 
-export function Story({ chapters, onStepChange }: StoryProps) {
+export function Story({ chapters, tiles, models, onStepChange }: StoryProps) {
   const sectionRefs = useRef(new Map<string, HTMLElement>());
   const activeRef = useRef<string | null>(null);
   const onStepChangeRef = useRef(onStepChange);
@@ -73,7 +104,7 @@ export function Story({ chapters, onStepChange }: StoryProps) {
             else sectionRefs.current.delete(step.id);
           }}
         >
-          <div className="story-card">{PLACEHOLDER[step.id] ?? <p>{step.id}</p>}</div>
+          <div className="story-card">{stepContent(step, { tiles, models })}</div>
         </section>
       ))}
     </div>
