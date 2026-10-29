@@ -1,24 +1,81 @@
-import { useEffect, useState } from "react";
-import type { Tile } from "./data/types";
-import { loadTiles } from "./data/load";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type maplibregl from "maplibre-gl";
+import type { ModelMeta, Step, Tile } from "./data/types";
+import { DEFAULT_LAYERS, loadModels, loadTiles } from "./data/load";
 import { GlobeMap } from "./map/GlobeMap";
+import { addDataLayers, applyLayerState } from "./map/layers";
+import { cameraFor } from "./map/camera";
+import { CHAPTERS } from "./story/chapters";
+import { Story } from "./story/Story";
+
+const FLY_DURATION_MS = 2500;
 
 export default function App() {
   const [tiles, setTiles] = useState<Tile[]>([]);
+  const [models, setModels] = useState<ModelMeta[]>([]);
+  const [step, setStep] = useState<Step>(CHAPTERS[0].steps[0]);
+
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const tilesRef = useRef(tiles);
+  const modelsRef = useRef(models);
+  const stepRef = useRef(step);
+  /** Step id the camera last flew to, so data arriving late doesn't re-fly. */
+  const flownRef = useRef<string | null>(null);
+  tilesRef.current = tiles;
+  modelsRef.current = models;
+  stepRef.current = step;
 
   useEffect(() => {
     let cancelled = false;
     loadTiles()
       .then((t) => !cancelled && setTiles(t))
       .catch((e) => console.error(e));
+    loadModels()
+      .then((m) => !cancelled && setModels(m))
+      .catch((e) => console.error(e));
     return () => {
       cancelled = true;
     };
   }, []);
 
+  /** Bring the map in line with the current step; safe to call any time. */
+  const sync = useCallback(() => {
+    const map = mapRef.current;
+    const t = tilesRef.current;
+    const s = stepRef.current;
+    if (!map || t.length === 0) return;
+    if (flownRef.current !== s.id) {
+      try {
+        // A new flyTo interrupts the one in flight, so fast scrolling settles on the last step.
+        map.flyTo({ ...cameraFor(s.camera, t), duration: FLY_DURATION_MS, essential: true });
+        flownRef.current = s.id;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    applyLayerState(map, { ...DEFAULT_LAYERS, ...s.layers }, t, modelsRef.current);
+  }, []);
+
+  const onReady = useCallback(
+    (map: maplibregl.Map) => {
+      mapRef.current = map;
+      flownRef.current = null; // a fresh map (e.g. StrictMode remount) has not flown anywhere
+      addDataLayers(map, tilesRef.current, modelsRef.current);
+      sync();
+    },
+    [sync],
+  );
+
+  useEffect(sync, [step, tiles, models, sync]);
+
+  const explore = step.id === "explore";
+
   return (
-    <main className="app">
-      <GlobeMap tiles={tiles} autoRotate />
+    <main className={`app${explore ? " app--explore" : ""}`}>
+      <div className="app-map">
+        <GlobeMap tiles={tiles} onReady={onReady} autoRotate={!!step.autoRotate} />
+      </div>
+      <Story chapters={CHAPTERS} onStepChange={setStep} />
     </main>
   );
 }
