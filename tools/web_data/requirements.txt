@@ -1,0 +1,7 @@
+rasterio
+numpy
+shapely
+pyproj
+pillow
+requests
+pytest

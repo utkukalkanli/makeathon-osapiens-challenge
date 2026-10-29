@@ -35,3 +35,7 @@ Thumbs.db
 
 # Brainstorm companion
 .superpowers/
+
+.venv-web/
+web/node_modules/
+web/dist/
