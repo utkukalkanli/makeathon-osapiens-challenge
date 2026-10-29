@@ -186,7 +186,7 @@ export function GlobeMap({ tiles, onReady, autoRotate = true }: GlobeMapProps) {
         minZoom: 0.5,
         maxZoom: 18.5,
         maxPitch: 75,
-        attributionControl: { compact: true },
+        attributionControl: { compact: true, customAttribution: ATTRIBUTION.labels },
         canvasContextAttributes: { antialias: true },
         fadeDuration: 200,
       });

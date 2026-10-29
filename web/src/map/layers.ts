@@ -52,8 +52,8 @@ function imageCoordinates([w, s, e, n]: Tile["bounds"]): ImageSourceSpecificatio
 
 const beforeId = (map: MapLibreMap) => (map.getLayer(PINS_GLOW_ID) ? PINS_GLOW_ID : undefined);
 
-/** Adds GFW raster sources and train-tile label image sources, all hidden. */
-export function addDataLayers(map: MapLibreMap, tiles: Tile[], _models: ModelMeta[]): void {
+/** Adds the GFW raster sources, hidden. Label and prediction sources are added lazily. */
+export function addDataLayers(map: MapLibreMap, _tiles: Tile[], _models: ModelMeta[]): void {
   const before = beforeId(map);
   const hidden = { visibility: "none" } as const;
 
@@ -83,28 +83,27 @@ export function addDataLayers(map: MapLibreMap, tiles: Tile[], _models: ModelMet
       before,
     );
   }
+}
 
-  for (const t of trainTiles(tiles)) {
-    for (const k of LABEL_KINDS) {
-      const id = labelId(t.id, k);
-      if (map.getSource(id)) continue;
-      map.addSource(id, {
-        type: "image",
-        url: labelUrl(t.id, k),
-        coordinates: imageCoordinates(t.bounds),
-      });
-      map.addLayer(
-        {
-          id,
-          type: "raster",
-          source: id,
-          layout: hidden,
-          paint: { "raster-opacity": 0.9, "raster-resampling": "nearest", "raster-fade-duration": 0 },
-        },
-        before,
-      );
-    }
-  }
+/** Add one label image source + layer on first need (image sources fetch on add). */
+function ensureLabel(map: MapLibreMap, tile: Tile, kind: LabelKind): void {
+  const id = labelId(tile.id, kind);
+  if (map.getSource(id)) return;
+  map.addSource(id, {
+    type: "image",
+    url: labelUrl(tile.id, kind),
+    coordinates: imageCoordinates(tile.bounds),
+  });
+  map.addLayer(
+    {
+      id,
+      type: "raster",
+      source: id,
+      layout: { visibility: "none" },
+      paint: { "raster-opacity": 0.9, "raster-resampling": "nearest", "raster-fade-duration": 0 },
+    },
+    beforeId(map),
+  );
 }
 
 /** Add one model's prediction source and layers on first need. */
@@ -142,8 +141,13 @@ export function applyLayerState(
   tiles: Tile[],
   models: ModelMeta[],
 ): void {
+  // Pins are added when the style loads; before that there is nothing to order against.
+  if (!map.getLayer(PINS_GLOW_ID)) return;
   if (state.prediction && models.some((m) => m.id === state.modelId)) ensurePrediction(map, state.modelId);
   const vis = layerVisibility(state, tiles, models);
+  for (const t of trainTiles(tiles)) {
+    for (const k of LABEL_KINDS) if (vis[labelId(t.id, k)]) ensureLabel(map, t, k);
+  }
   for (const [id, on] of Object.entries(vis)) {
     if (!map.getLayer(id)) continue;
     const want = on ? "visible" : "none";
