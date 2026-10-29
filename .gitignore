@@ -12,6 +12,7 @@ env/
 
 # Data, caches, trained artifacts — never commit
 data/
+!web/public/data/
 cache/
 cache_clay/
 checkpoints/
