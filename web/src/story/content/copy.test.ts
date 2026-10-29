@@ -55,7 +55,7 @@ function text(el: ReactElement): string {
     .trim();
 }
 
-const FORBIDDEN = /\b(correct|truth|accurate|right)\b/i;
+const FORBIDDEN = /\b(correct|truth|accurate|right)\b|never seen/i;
 
 const laos = TILES[0];
 const CASES: [string, ReactElement][] = [
@@ -85,6 +85,8 @@ test("Approach shows the validation metrics", () => {
   expect(t).toContain("0.763");
   expect(t).toContain("0.622");
   expect(t).toMatch(/71-channel/);
+  expect(t).toMatch(/2 teachers/);
+  expect(t).toMatch(/retrain/i);
 });
 
 test("Opening has the wordmark, tagline, EUDR line and pin legend", () => {
@@ -94,7 +96,7 @@ test("Opening has the wordmark, tagline, EUDR line and pin legend", () => {
   expect(t).toMatch(/2020/);
   expect(t).toContain("osapiens Terra Makeathon 2026");
   expect(t).toMatch(/labelled/i);
-  expect(t).toMatch(/predicted/i);
+  expect(t).toMatch(/no labels from these regions were used in training/i);
 });
 
 test("Disagree reads the single-source share and blind spots from the tile", () => {
@@ -105,12 +107,13 @@ test("Disagree reads the single-source share and blind spots from the tile", () 
   expect(t).toMatch(/flat|low-backscatter/i);
 });
 
-test("Unseen reads hectares for the featured model and says never seen in training", () => {
+test("Unseen reads hectares for the featured model and says no labels from here were used", () => {
   const t = text(createElement(Unseen, { tile: TILES[1], model: MODELS[0] }));
   expect(t).toContain("Colombia");
   expect(t).toContain("18NYH_2_1");
   expect(t).toContain("725.7");
-  expect(t).toMatch(/never seen in training/i);
+  expect(t).toMatch(/No labels from here in training/);
+  expect(t).toMatch(/RADD alerts \(Global Forest Watch\)/);
 });
 
 test("Story maps every step to real content", () => {

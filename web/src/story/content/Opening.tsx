@@ -19,7 +19,7 @@ export function Opening() {
       <Legend
         items={[
           { color: COLORS.trainPin, shape: "dot", label: "Training tiles", note: "labelled by alert systems" },
-          { color: COLORS.testPin, shape: "dot", label: "Test tiles", note: "predicted by our model, never seen in training" },
+          { color: COLORS.testPin, shape: "dot", label: "Test tiles", note: "our model's predictions — no labels from these regions were used in training" },
         ]}
       />
       <p className="scroll-cue" aria-hidden="true">

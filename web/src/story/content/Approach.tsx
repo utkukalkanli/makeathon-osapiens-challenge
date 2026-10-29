@@ -4,9 +4,8 @@ const INPUTS = [
   { name: "AEF embeddings", note: "foundation-model features" },
 ];
 
-const STAGES = [
-  { name: "71-channel temporal U-Net", note: "six years, 2020–2025 · modality masks + dropout" },
-  { name: "Pseudo-labels", note: "2-teacher ensemble cleans the noisy alerts" },
+const OUTPUTS = [
+  { name: "Predictions", note: "per-pixel deforestation map" },
   { name: "Polygons", note: "deforestation areas ≥ 0.5 ha" },
 ];
 
@@ -21,10 +20,24 @@ export function PipelineGraphic() {
           </div>
         ))}
       </div>
-      {STAGES.map((s, idx) => (
+      <span className="pipeline__arrow" aria-hidden="true">↓</span>
+      <div className="pipeline__model">
+        <div className="pipeline__node pipeline__node--model">
+          <span className="pipeline__name">71-channel temporal U-Net</span>
+          <span className="pipeline__note">six years, 2020–2025 · modality masks + dropout</span>
+        </div>
+        <div className="pipeline__loop">
+          <span className="pipeline__loop-icon" aria-hidden="true">↻</span>
+          <span className="pipeline__note">
+            <strong>2 teachers</strong> (S2-only, S2+S1) pseudo-label unlabelled test tiles,
+            uncertain pixels ignored → retrain
+          </span>
+        </div>
+      </div>
+      {OUTPUTS.map((s) => (
         <div key={s.name} className="pipeline__stage">
           <span className="pipeline__arrow" aria-hidden="true">↓</span>
-          <div className={`pipeline__node${idx === 0 ? " pipeline__node--model" : ""}`}>
+          <div className="pipeline__node">
             <span className="pipeline__name">{s.name}</span>
             <span className="pipeline__note">{s.note}</span>
           </div>
@@ -40,8 +53,8 @@ export function Approach() {
       <p className="eyebrow">Chapter 2 · Our approach</p>
       <h2>Learn from every signal, not one alert</h2>
       <p>
-        One model reads radar, optical and embeddings together, and keeps working when a sensor
-        goes dark.
+        One model reads radar, optical and embeddings together, and is trained to cope with
+        missing sensors.
       </p>
       <PipelineGraphic />
       <dl className="metrics">

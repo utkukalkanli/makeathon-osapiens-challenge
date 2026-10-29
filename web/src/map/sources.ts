@@ -6,7 +6,7 @@ export const ESRI_URL =
 export const EOX_URL =
   "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg";
 export const GFW_ALERTS_URL =
-  "https://tiles.globalforestwatch.org/gfw_integrated_alerts/latest/default/{z}/{x}/{y}.png";
+  "https://tiles.globalforestwatch.org/wur_radd_alerts/latest/dynamic/{z}/{x}/{y}.png";
 export const TREE_COVER_LOSS_URL =
   "https://tiles.globalforestwatch.org/umd_tree_cover_loss/latest/dynamic/{z}/{x}/{y}.png";
 
@@ -29,6 +29,8 @@ export const COLORS = {
   agreement3: "#dc2626",
   trainPin: "#4ade80",
   testPin: "#f87171",
+  /** Tint of GFW's rendered RADD alert tiles. */
+  gfwAlerts: "#e46699",
 } as const;
 
 export const BACKGROUND = "#02040a";

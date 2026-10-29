@@ -79,7 +79,7 @@ export function addDataLayers(map: MapLibreMap, _tiles: Tile[], _models: ModelMe
       attribution: ATTRIBUTION.gfw,
     });
     map.addLayer(
-      { id: GFW_ALERTS_ID, type: "raster", source: GFW_ALERTS_ID, layout: hidden, paint: { "raster-opacity": 0.85 } },
+      { id: GFW_ALERTS_ID, type: "raster", source: GFW_ALERTS_ID, layout: hidden, paint: { "raster-opacity": 0.6 } },
       before,
     );
   }
