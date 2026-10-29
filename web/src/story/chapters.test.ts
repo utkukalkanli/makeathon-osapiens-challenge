@@ -33,8 +33,8 @@ test("step ids are unique and match the brief", () => {
   ]);
 });
 
-test("disagree tile is the controller-ruled Laos train tile", () => {
-  expect(DISAGREE_TILE).toBe("48QWD_2_2");
+test("disagree tile is the controller-ruled Colombia train tile", () => {
+  expect(DISAGREE_TILE).toBe("18NWJ_8_9");
   expect(tiles.find((t) => t.id === DISAGREE_TILE)?.split).toBe("train");
 });
 

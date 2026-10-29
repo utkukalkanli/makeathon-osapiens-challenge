@@ -30,6 +30,7 @@ export default function App() {
     ...DEFAULT_LAYERS,
     ...CHAPTERS.flatMap((c) => c.steps).find((x) => x.id === "explore")?.layers,
     prediction: true,
+    labels: { ...DEFAULT_LAYERS.labels, agreement: true },
     labelTiles: "all",
   }));
 

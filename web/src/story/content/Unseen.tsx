@@ -25,14 +25,14 @@ export function Unseen({ tile, model }: UnseenProps) {
         <span className="stat__label">of forest loss flagged by our model on this tile</span>
       </div>
       <p>
-        Compare the cyan areas with RADD radar alerts from Global Forest Watch, a system
-        independent of our model: where both appear, they see the same change; where only cyan
+        Compare the cyan areas with RADD radar alerts from Global Forest Watch, an alert
+        system whose labels for these regions we never used: where both appear, they see the same change; where only cyan
         appears, the model flags change that no alert has confirmed.
       </p>
       <Legend
         items={[
           { color: COLORS.model, label: "Orbitree model", note: model?.label },
-          { color: COLORS.gfwAlerts, label: "RADD alerts (Global Forest Watch)", note: "radar-based, independent of our model" },
+          { color: COLORS.gfwAlerts, label: "RADD alerts (Global Forest Watch)", note: "radar-based; labels for these regions never used" },
         ]}
       />
     </div>

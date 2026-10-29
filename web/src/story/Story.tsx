@@ -32,7 +32,7 @@ export function stepContent(step: Step, ctx: ContentContext): ReactNode {
     case "approach":
       return <Approach />;
     case "explore":
-      // Task 8 replaces this with the explore panel.
+      // Placeholder copy; the explore panel is rendered by the app shell.
       return (
         <>
           <h2>Explore</h2>

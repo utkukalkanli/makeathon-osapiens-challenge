@@ -112,7 +112,7 @@ function addPins(map: maplibregl.Map, tiles: Tile[]) {
       "circle-color": splitColor,
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 0, 12, 5, 18, 10, 26],
       "circle-blur": 1,
-      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.7, 10, 0.55, 13, 0.15],
+      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.7, 8, 0.55, 10.5, 0],
     },
   });
   map.addLayer({
@@ -124,8 +124,8 @@ function addPins(map: maplibregl.Map, tiles: Tile[]) {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 0, 4, 5, 5, 10, 6.5],
       "circle-stroke-color": "#f8fafc",
       "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 0, 0.8, 10, 1.5],
-      "circle-stroke-opacity": 0.85,
-      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 10, 1, 13, 0.35],
+      "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.85, 11, 0.1],
+      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 8, 1, 11, 0.12],
     },
   });
 }

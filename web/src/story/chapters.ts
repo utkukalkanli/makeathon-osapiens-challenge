@@ -1,7 +1,7 @@
 import type { Chapter } from "../data/types";
 
 /** Laos train tile with the most visible label disagreement (controller ruling, Task 2). */
-export const DISAGREE_TILE = "48QWD_2_2";
+export const DISAGREE_TILE = "18NWJ_8_9";
 
 const NO_LABELS = { agreement: false, glads2: false, gladl: false, radd: false };
 

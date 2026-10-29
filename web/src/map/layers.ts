@@ -100,7 +100,7 @@ function ensureLabel(map: MapLibreMap, tile: Tile, kind: LabelKind): void {
       type: "raster",
       source: id,
       layout: { visibility: "none" },
-      paint: { "raster-opacity": 0.9, "raster-resampling": "nearest", "raster-fade-duration": 0 },
+      paint: { "raster-opacity": 0.65, "raster-resampling": "nearest", "raster-fade-duration": 0 },
     },
     beforeId(map),
   );

@@ -12,7 +12,7 @@ export const TREE_COVER_LOSS_URL =
 
 export const ATTRIBUTION = {
   esri: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
-  gfw: "Alerts © Global Forest Watch (UMD GLAD, WUR RADD)",
+  gfw: "RADD alerts © Wageningen University / Global Forest Watch",
   treeCoverLoss: "Hansen/UMD/Google/USGS/NASA",
   labels: "Weak labels: GLAD-S2, GLAD-L, RADD via osapiens Terra Makeathon 2026",
   // Shown only if the basemap falls back to EOX.

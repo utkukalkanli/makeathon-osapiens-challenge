@@ -4,7 +4,7 @@ import { Legend } from "../../components/Legend";
 
 const fmtPct = (v: number) => v.toFixed(1);
 const fmtInt = (v: number) => v.toLocaleString("en-US");
-const share = (pct: number) => (pct === 0 ? "nothing" : `${fmtPct(pct)}% of pixels`);
+const share = (pct: number) => `${fmtPct(pct)}% of pixels`;
 
 export interface DisagreeProps {
   tile: Tile | undefined;
@@ -58,10 +58,13 @@ export function Disagree({ tile, view }: DisagreeProps) {
       </p>
       {s && (
         <p>
-          On {where}, GLAD-L flags {share(s.gladlPct)}, RADD flags {share(s.raddPct)} and the
-          optical Sentinel-2 system flags {share(s.glads2Pct)}.
+          On {where}, GLAD-S2 flags {share(s.glads2Pct)}, GLAD-L {share(s.gladlPct)} and RADD{" "}
+          {share(s.raddPct)}.
         </p>
       )}
+      <p className="legend-note">
+        Map colours are drawn semi-transparent, so overlapping colours blend where sources agree.
+      </p>
       <Legend
         title="In general"
         items={[
