@@ -159,13 +159,22 @@ export interface GlobeMapProps {
   autoRotate?: boolean;
   /** Wheel zooms the map when true; when false the wheel scrolls the page. Drag stays on. */
   scrollZoom?: boolean;
+  /** Called once: on the map's first `idle`, or right away when the globe can't be drawn. */
+  onFirstIdle?: () => void;
 }
 
-export function GlobeMap({ tiles, onReady, autoRotate = true, scrollZoom = true }: GlobeMapProps) {
+export function GlobeMap({
+  tiles,
+  onReady,
+  autoRotate = true,
+  scrollZoom = true,
+  onFirstIdle,
+}: GlobeMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const tilesRef = useRef(tiles);
   const onReadyRef = useRef(onReady);
+  const onFirstIdleRef = useRef(onFirstIdle);
   const autoRotateRef = useRef(autoRotate);
   const scrollZoomRef = useRef(scrollZoom);
   const rotatorRef = useRef<AutoRotate>(createAutoRotate());
@@ -173,6 +182,7 @@ export function GlobeMap({ tiles, onReady, autoRotate = true, scrollZoom = true 
 
   tilesRef.current = tiles;
   onReadyRef.current = onReady;
+  onFirstIdleRef.current = onFirstIdle;
 
   // Re-arm the spin whenever the caller switches auto-rotate back on.
   useEffect(() => {
@@ -193,6 +203,7 @@ export function GlobeMap({ tiles, onReady, autoRotate = true, scrollZoom = true 
     if (!container) return;
     if (!hasWebGL()) {
       setFailure("Your browser has WebGL disabled or unavailable, so the 3D globe can't be drawn.");
+      onFirstIdleRef.current?.();
       return;
     }
 
@@ -214,6 +225,7 @@ export function GlobeMap({ tiles, onReady, autoRotate = true, scrollZoom = true 
     } catch (e) {
       console.error(e);
       setFailure("The 3D globe couldn't start (WebGL context creation failed).");
+      onFirstIdleRef.current?.();
       return;
     }
     mapRef.current = map;
@@ -251,6 +263,17 @@ export function GlobeMap({ tiles, onReady, autoRotate = true, scrollZoom = true 
         return;
       }
       console.error(e.error);
+    });
+
+    map.once("idle", () => {
+      // On a small map the compact attribution starts expanded and hides much of the view;
+      // start it collapsed (the "i" button still opens it), as MapLibre does after a drag.
+      if (window.innerWidth < 768) {
+        const attrib = container.querySelector(".maplibregl-ctrl-attrib.maplibregl-compact");
+        attrib?.classList.remove("maplibregl-compact-show");
+        attrib?.removeAttribute("open");
+      }
+      onFirstIdleRef.current?.();
     });
 
     // Any direct touch on the globe stops the idle spin.

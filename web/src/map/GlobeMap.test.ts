@@ -30,3 +30,21 @@ test("wheel only stops the spin while scroll-zoom is on; press/touch always do",
   expect(countsAsInteraction("touchstart", false)).toBe(true);
   expect(countsAsInteraction("mousemove", true)).toBe(false);
 });
+
+test("hasWebGL is false when the browser hands out no WebGL context (or throws)", async () => {
+  const { hasWebGL } = await import("./GlobeMap");
+  const proto = HTMLCanvasElement.prototype as unknown as { getContext: unknown };
+  const original = proto.getContext;
+  try {
+    proto.getContext = () => null;
+    expect(hasWebGL()).toBe(false);
+    proto.getContext = () => {
+      throw new Error("blocked");
+    };
+    expect(hasWebGL()).toBe(false);
+    proto.getContext = (kind: string) => (kind === "webgl" ? {} : null);
+    expect(hasWebGL()).toBe(true);
+  } finally {
+    proto.getContext = original;
+  }
+});

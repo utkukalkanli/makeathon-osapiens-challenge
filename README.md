@@ -100,3 +100,32 @@ The first version supports:
 - A per-tile month scrubber that steps through the available Sentinel-1 and Sentinel-2 timeline
 - Reprojected label overlays on top of the active Sentinel-2 and Sentinel-1 views
 - Optional prediction overlays from per-tile submission GeoJSON folders under `submission/`, with independent opacity from the weak-label overlay
+
+## Orbitree web app
+
+`web/` holds **Orbitree** ("from orbit to every tree"), a static Vite + React scroll story on a
+MapLibre globe that presents the project: how the weak labels disagree, our approach, and our
+model's predictions on unseen test regions, followed by a free explore mode.
+
+Build the web data (tile metadata, label and prediction overlays) from the submission folders
+into `web/public/data`, from the repository root:
+
+```bash
+python3 -m venv .venv-web
+.venv-web/bin/python -m pip install -r tools/web_data/requirements.txt
+.venv-web/bin/python -m tools.web_data.build --submissions ../MAKEATHON --out web/public/data
+```
+
+Run it locally:
+
+```bash
+cd web && npm i && npm run dev
+```
+
+`npm test` runs the unit tests, `npm run build` writes the static site to `web/dist`, and
+`npm run preview` serves that build.
+
+Deploying on Vercel: import the repository and set the **root directory** to `web`, with the
+**framework preset** Vite (build command `npm run build`, output directory `dist`). No
+environment variables are needed. `web/vercel.json` enables clean URLs and caches `/data/*`
+for a day.

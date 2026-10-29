@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import type { Chapter, ModelMeta, Step, Tile } from "../data/types";
-import { pickActiveStep } from "./activeStep";
+import { anchorY, pickActiveStep } from "./activeStep";
 import { DISAGREE_TILE } from "./chapters";
 import { Opening } from "./content/Opening";
 import { Disagree } from "./content/Disagree";
@@ -71,7 +71,7 @@ export function Story({ chapters, tiles, models, onStepChange }: StoryProps) {
         const r = el.getBoundingClientRect();
         return { id, top: r.top, bottom: r.bottom };
       });
-      const id = pickActiveStep(rects, window.innerHeight * ANCHOR);
+      const id = pickActiveStep(rects, anchorY(window.innerWidth, window.innerHeight, ANCHOR));
       if (id === null || id === activeRef.current) return;
       activeRef.current = id;
       const step = byId.get(id);

@@ -171,6 +171,7 @@ html { background: var(--bg); }
   background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 20px;
   backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2);
   box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overscroll-behavior: contain; /* scrolling the panel never chains into the story */
 }
 .explore__title { margin: 0 0 0.75rem; font-size: 1.5rem; color: var(--ink); }
 .explore__group { margin-bottom: 1.1rem; }
@@ -198,3 +199,56 @@ html { background: var(--bg); }
   background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.45); border-radius: 10px;
 }
 .explore__back:hover { background: rgba(34, 211, 238, 0.2); }
+
+/* ---------- loading ---------- */
+.loading {
+  position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 50%, rgba(30, 64, 120, 0.18), transparent 70%),
+    var(--bg);
+  transition: opacity 0.9s ease, visibility 0s linear 0.9s;
+}
+.loading--done { opacity: 0; visibility: hidden; pointer-events: none; }
+.loading__mark { position: relative; text-align: center; padding: 0 1.5rem; }
+.loading__tagline {
+  margin: 0.75rem 0 0; font-size: clamp(1rem, 1.6vw, 1.35rem); font-weight: 300;
+  color: #cbd5e1; letter-spacing: 0.02em;
+}
+.loading__pulse {
+  display: block; width: 2.5rem; height: 2px; margin: 1.5rem auto 0; border-radius: 2px;
+  background: var(--accent); box-shadow: 0 0 12px var(--accent);
+  animation: loading-pulse 1.4s ease-in-out infinite;
+}
+@keyframes loading-pulse { 0%, 100% { opacity: 0.25; transform: scaleX(0.4); } 50% { opacity: 1; transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .loading { transition: none; }
+  .loading__pulse { animation: none; }
+}
+
+/* ---------- narrow screens: map pinned on top, story beneath ---------- */
+/* Keep 55vh / 767px in sync with NARROW_MAP_FRACTION / NARROW_MAX_WIDTH in story/activeStep.ts. */
+@media (max-width: 767px) {
+  :root { --story-w: 100%; --map-h: 55vh; }
+  .app-map {
+    left: 0; right: 0; bottom: auto; height: var(--map-h); z-index: 2;
+    border-bottom: 1px solid var(--glass-edge);
+    box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.8);
+  }
+  /* The story starts below the map and its cards slide up underneath it. */
+  .story { padding: var(--map-h) 0 20vh; }
+  .story-step,
+  .story-step:last-child {
+    min-height: calc(100vh - var(--map-h));
+    padding: 1.25rem 1rem;
+  }
+  .story-card { max-width: none; font-size: 1rem; padding: 1.25rem 1.2rem; border-radius: 16px; }
+  .wordmark { font-size: clamp(2.6rem, 13vw, 3.4rem) !important; }
+  .stat__num { font-size: clamp(3.2rem, 16vw, 4.5rem); }
+  .metrics { gap: 1.5rem; }
+  .pipeline__inputs { gap: 0.35rem; }
+  /* Explore: full width under the map. */
+  .explore {
+    top: var(--map-h); left: 0; right: 0; bottom: 0; width: auto; min-width: 0;
+    border-radius: 0; border-left: none; border-right: none; border-bottom: none;
+  }
+}

@@ -8,13 +8,23 @@ import { cameraFor } from "./map/camera";
 import { CHAPTERS } from "./story/chapters";
 import { Story } from "./story/Story";
 import { ExplorePanel } from "./explore/ExplorePanel";
+import { Loading } from "./components/Loading";
 
 const FLY_DURATION_MS = 2500;
+/** The loading overlay never outlives this, even if slow tiles hold back the map's first idle. */
+const LOADING_TIMEOUT_MS = 6000;
 
 export default function App() {
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [models, setModels] = useState<ModelMeta[]>([]);
   const [step, setStep] = useState<Step>(CHAPTERS[0].steps[0]);
+  const [loaded, setLoaded] = useState(false);
+  const onFirstIdle = useCallback(() => setLoaded(true), []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setLoaded(true), LOADING_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, []);
 
   const [exploreState, setExploreState] = useState<LayerState>(() => ({
     ...DEFAULT_LAYERS,
@@ -100,6 +110,7 @@ export default function App() {
           onReady={onReady}
           autoRotate={!!step.autoRotate}
           scrollZoom={explore}
+          onFirstIdle={onFirstIdle}
         />
       </div>
       {explore && (
@@ -112,6 +123,7 @@ export default function App() {
         />
       )}
       <Story chapters={CHAPTERS} tiles={tiles} models={models} onStepChange={setStep} />
+      <Loading done={loaded} />
     </main>
   );
 }

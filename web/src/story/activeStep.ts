@@ -21,3 +21,17 @@ export function pickActiveStep(rects: StepRect[], anchorY: number): string | nul
   }
   return best;
 }
+
+/** Below this width the map is pinned to the top of the viewport and the story runs beneath. */
+export const NARROW_MAX_WIDTH = 767;
+/** Fraction of the viewport height the pinned map covers on narrow screens (matches the CSS). */
+export const NARROW_MAP_FRACTION = 0.55;
+
+/**
+ * Viewport y where a step becomes active: `fraction` of the height on wide screens; on narrow
+ * screens the middle of the visible text area below the pinned map.
+ */
+export function anchorY(width: number, height: number, fraction = 0.5): number {
+  if (width > NARROW_MAX_WIDTH) return height * fraction;
+  return height * (NARROW_MAP_FRACTION + (1 - NARROW_MAP_FRACTION) / 2);
+}
