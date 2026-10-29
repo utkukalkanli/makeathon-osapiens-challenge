@@ -21,3 +21,12 @@ test("fallback counts consecutive Esri errors; a successful tile resets the stre
   for (let i = 0; i < 7; i++) expect(c.error()).toBe(false);
   expect(c.error()).toBe(true);
 });
+
+test("wheel only stops the spin while scroll-zoom is on; press/touch always do", async () => {
+  const { countsAsInteraction } = await import("./GlobeMap");
+  expect(countsAsInteraction("wheel", false)).toBe(false);
+  expect(countsAsInteraction("wheel", true)).toBe(true);
+  expect(countsAsInteraction("mousedown", false)).toBe(true);
+  expect(countsAsInteraction("touchstart", false)).toBe(true);
+  expect(countsAsInteraction("mousemove", true)).toBe(false);
+});

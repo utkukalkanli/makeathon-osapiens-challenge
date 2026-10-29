@@ -45,10 +45,10 @@ export default function App() {
     const s = stepRef.current;
     if (!map || t.length === 0) return;
     if (flownRef.current !== s.id) {
+      flownRef.current = s.id; // set first: a bad target is logged once, not on every sync
       try {
         // A new flyTo interrupts the one in flight, so fast scrolling settles on the last step.
         map.flyTo({ ...cameraFor(s.camera, t), duration: FLY_DURATION_MS, essential: true });
-        flownRef.current = s.id;
       } catch (e) {
         console.error(e);
       }
@@ -73,7 +73,12 @@ export default function App() {
   return (
     <main className={`app${explore ? " app--explore" : ""}`}>
       <div className="app-map">
-        <GlobeMap tiles={tiles} onReady={onReady} autoRotate={!!step.autoRotate} />
+        <GlobeMap
+          tiles={tiles}
+          onReady={onReady}
+          autoRotate={!!step.autoRotate}
+          scrollZoom={explore}
+        />
       </div>
       <Story chapters={CHAPTERS} onStepChange={setStep} />
     </main>

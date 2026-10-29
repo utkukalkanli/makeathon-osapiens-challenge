@@ -60,6 +60,15 @@ export function createAutoRotate(degPerSec = AUTO_ROTATE_DEG_PER_SEC): AutoRotat
   };
 }
 
+/**
+ * Whether a direct input event on the globe should stop the idle spin. The wheel only counts
+ * when it zooms the map; with scroll-zoom off it scrolls the page (the story) instead.
+ */
+export function countsAsInteraction(type: string, scrollZoom: boolean): boolean {
+  if (type === "wheel") return scrollZoom;
+  return type === "mousedown" || type === "touchstart";
+}
+
 export function hasWebGL(): boolean {
   try {
     const canvas = document.createElement("canvas");
@@ -148,14 +157,17 @@ export interface GlobeMapProps {
   tiles: Tile[];
   onReady?: (map: maplibregl.Map) => void;
   autoRotate?: boolean;
+  /** Wheel zooms the map when true; when false the wheel scrolls the page. Drag stays on. */
+  scrollZoom?: boolean;
 }
 
-export function GlobeMap({ tiles, onReady, autoRotate = true }: GlobeMapProps) {
+export function GlobeMap({ tiles, onReady, autoRotate = true, scrollZoom = true }: GlobeMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const tilesRef = useRef(tiles);
   const onReadyRef = useRef(onReady);
   const autoRotateRef = useRef(autoRotate);
+  const scrollZoomRef = useRef(scrollZoom);
   const rotatorRef = useRef<AutoRotate>(createAutoRotate());
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -167,6 +179,14 @@ export function GlobeMap({ tiles, onReady, autoRotate = true }: GlobeMapProps) {
     if (autoRotate && !autoRotateRef.current) rotatorRef.current = createAutoRotate();
     autoRotateRef.current = autoRotate;
   }, [autoRotate]);
+
+  useEffect(() => {
+    scrollZoomRef.current = scrollZoom;
+    const map = mapRef.current;
+    if (!map) return;
+    if (scrollZoom) map.scrollZoom.enable();
+    else map.scrollZoom.disable();
+  }, [scrollZoom]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -189,6 +209,7 @@ export function GlobeMap({ tiles, onReady, autoRotate = true }: GlobeMapProps) {
         attributionControl: { compact: true, customAttribution: ATTRIBUTION.labels },
         canvasContextAttributes: { antialias: true },
         fadeDuration: 200,
+        scrollZoom: scrollZoomRef.current,
       });
     } catch (e) {
       console.error(e);
@@ -233,7 +254,9 @@ export function GlobeMap({ tiles, onReady, autoRotate = true }: GlobeMapProps) {
     });
 
     // Any direct touch on the globe stops the idle spin.
-    const stop = () => rotatorRef.current.interact();
+    const stop = (e: Event) => {
+      if (countsAsInteraction(e.type, scrollZoomRef.current)) rotatorRef.current.interact();
+    };
     const canvasContainer = map.getCanvasContainer();
     const opts: AddEventListenerOptions = { passive: true };
     canvasContainer.addEventListener("mousedown", stop, opts);
